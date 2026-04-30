@@ -1,0 +1,381 @@
+import logging
+import os
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+from configs import configure_logging
+from schemas import (
+    AccountListResponse,
+    ActivityListResponse,
+    ChatRequest,
+    ChatResponse,
+    OpportunityListResponse,
+    PricingRequest,
+    PricingResponse,
+    QuoteCreateRequest,
+    QuoteCreateResponse,
+    QuoteFinalizeRequest,
+    QuoteFinalizeResponse,
+    QuoteHistoryResponse,
+    RecommendationRequest,
+    RecommendationResponse,
+)
+from services.agent import (
+    build_agent_graph,
+    build_pricing_graph,
+    build_quote_creation_graph,
+    build_recommendation_graph,
+)
+from services.data import (
+    get_agent_run,
+    get_order,
+    list_agent_runs,
+    record_activity,
+    record_agent_run,
+)
+from services.llm import create_llm_client
+from services.mcp.factory import create_default_mcp_engine
+
+
+configure_logging()
+logger = logging.getLogger(__name__)
+app = FastAPI(title="Enterprise AI Agent Platform")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv(
+            "FRONTEND_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000",
+        ).split(",")
+        if origin.strip()
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    logger.info("Health check requested")
+    return {"status": "ok"}
+
+
+@app.get("/accounts", response_model=AccountListResponse)
+def list_account_records() -> AccountListResponse:
+    logger.info("Account list requested")
+    result = _execute_mcp_tool("list_accounts", {})
+    return AccountListResponse(accounts=result["accounts"])
+
+
+@app.get("/opportunities", response_model=OpportunityListResponse)
+def list_opportunity_records(sf_account_id: str | None = None) -> OpportunityListResponse:
+    logger.info("Opportunity list requested: sf_account_id=%s", sf_account_id)
+    payload = {"sf_account_id": sf_account_id} if sf_account_id else {}
+    result = _execute_mcp_tool("list_opportunities", payload)
+    return OpportunityListResponse(opportunities=result["opportunities"])
+
+
+@app.get(
+    "/accounts/{sf_account_id}/opportunities",
+    response_model=OpportunityListResponse,
+)
+def list_account_opportunity_records(sf_account_id: str) -> OpportunityListResponse:
+    logger.info("Account opportunity list requested: sf_account_id=%s", sf_account_id)
+    record_activity(
+        sf_account_id=sf_account_id,
+        system="Salesforce CRM Cloud",
+        event_type="account_viewed",
+        title="Account portfolio viewed",
+        detail=f"Salesforce account {sf_account_id} opportunities loaded.",
+    )
+    result = _execute_mcp_tool("list_opportunities", {"sf_account_id": sf_account_id})
+    return OpportunityListResponse(opportunities=result["opportunities"])
+
+
+@app.get("/opportunities/{sf_opportunity_id}")
+def get_opportunity_record(sf_opportunity_id: str) -> dict:
+    logger.info("Opportunity detail requested: sf_opportunity_id=%s", sf_opportunity_id)
+    opportunity = _execute_mcp_tool(
+        "get_opportunity",
+        {"sf_opportunity_id": sf_opportunity_id},
+    )
+    record_activity(
+        sf_opportunity_id=sf_opportunity_id,
+        system="Salesforce CRM Cloud",
+        event_type="opportunity_viewed",
+        title="Opportunity viewed",
+        detail=f"Salesforce opportunity {sf_opportunity_id} details loaded.",
+    )
+    return opportunity
+
+
+@app.get(
+    "/opportunities/{sf_opportunity_id}/quotes",
+    response_model=QuoteHistoryResponse,
+)
+def list_quote_records(sf_opportunity_id: str) -> QuoteHistoryResponse:
+    logger.info("Quote history requested: sf_opportunity_id=%s", sf_opportunity_id)
+    result = _execute_mcp_tool("list_quotes", {"sf_opportunity_id": sf_opportunity_id})
+    return QuoteHistoryResponse(
+        sf_opportunity_id=sf_opportunity_id,
+        quotes=result["quotes"],
+    )
+
+
+@app.get(
+    "/opportunities/{sf_opportunity_id}/activity",
+    response_model=ActivityListResponse,
+)
+def list_activity_records(sf_opportunity_id: str) -> ActivityListResponse:
+    logger.info("Activity requested: sf_opportunity_id=%s", sf_opportunity_id)
+    result = _execute_mcp_tool(
+        "list_activity",
+        {"sf_opportunity_id": sf_opportunity_id},
+    )
+    return ActivityListResponse(
+        sf_opportunity_id=sf_opportunity_id,
+        activity=result["activity"],
+    )
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    logger.info(
+        "Chat request received: has_sf_opportunity_id=%s message_length=%s",
+        bool(request.sf_opportunity_id),
+        len(request.message),
+    )
+    state = {
+        "messages": [
+            {
+                "role": "user",
+                "content": request.message,
+            }
+        ]
+    }
+    if request.sf_opportunity_id:
+        state["sf_opportunity_id"] = request.sf_opportunity_id
+
+    try:
+        result = build_agent_graph(llm_client=create_llm_client()).invoke(state)
+    except Exception as exc:
+        logger.exception(
+            "Chat request failed: has_sf_opportunity_id=%s",
+            bool(request.sf_opportunity_id),
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response = result["response"]
+    logger.info(
+        "Chat request completed: status=%s oracle_quote_id=%s product_count=%s",
+        result["status"],
+        response["oracle_quote_id"],
+        len(response["products"]),
+    )
+    return ChatResponse(
+        status=result["status"],
+        message=response["message"],
+        oracle_quote_id=response["oracle_quote_id"],
+        products=response["products"],
+        pricing=response["pricing"],
+    )
+
+
+@app.post("/quote/recommendations", response_model=RecommendationResponse)
+def recommend_quote(request: RecommendationRequest) -> RecommendationResponse:
+    logger.info(
+        "Recommendation request received: sf_opportunity_id=%s message_length=%s",
+        request.sf_opportunity_id,
+        len(request.message),
+    )
+    state = {
+        "sf_opportunity_id": request.sf_opportunity_id,
+        "messages": [
+            {
+                "role": "user",
+                "content": request.message,
+            }
+        ],
+    }
+
+    try:
+        result = build_recommendation_graph(llm_client=create_llm_client()).invoke(state)
+    except Exception as exc:
+        logger.exception(
+            "Recommendation request failed: sf_opportunity_id=%s",
+            request.sf_opportunity_id,
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response = result["response"]
+    record_agent_run(
+        sf_opportunity_id=request.sf_opportunity_id,
+        intent="recommendation",
+        status=response["status"],
+        steps=response["run_steps"],
+    )
+    logger.info(
+        "Recommendation request completed: sf_opportunity_id=%s product_count=%s total=%s",
+        request.sf_opportunity_id,
+        len(response["products"]),
+        response["pricing"]["total"],
+    )
+    return RecommendationResponse(**response)
+
+
+@app.post("/quote/pricing", response_model=PricingResponse)
+def price_quote(request: PricingRequest) -> PricingResponse:
+    logger.info(
+        "Pricing request received: sf_opportunity_id=%s product_count=%s",
+        request.sf_opportunity_id,
+        len(request.products),
+    )
+    state = {
+        "sf_opportunity_id": request.sf_opportunity_id,
+        "currency": request.currency,
+        "selected_products": [product.model_dump() for product in request.products],
+    }
+
+    try:
+        result = build_pricing_graph().invoke(state)
+    except Exception as exc:
+        logger.exception(
+            "Pricing request failed: sf_opportunity_id=%s",
+            request.sf_opportunity_id,
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response = result["response"]
+    record_activity(
+        sf_opportunity_id=request.sf_opportunity_id,
+        system="Oracle CPQ Cloud",
+        event_type="pricing_recalculated",
+        title="Pricing recalculated",
+        detail=(
+            f"Oracle CPQ repriced {len(response['pricing']['line_items'])} "
+            f"selected products at {response['pricing']['currency']} {response['pricing']['total']}."
+        ),
+    )
+    record_agent_run(
+        sf_opportunity_id=request.sf_opportunity_id,
+        intent="pricing",
+        status=response["status"],
+        steps=response["run_steps"],
+    )
+    logger.info(
+        "Pricing request completed: sf_opportunity_id=%s total=%s",
+        request.sf_opportunity_id,
+        response["pricing"]["total"],
+    )
+    return PricingResponse(**response)
+
+
+@app.post("/quote/create", response_model=QuoteCreateResponse)
+def create_quote_from_selection(request: QuoteCreateRequest) -> QuoteCreateResponse:
+    logger.info(
+        "Quote creation request received: sf_opportunity_id=%s product_count=%s",
+        request.sf_opportunity_id,
+        len(request.products),
+    )
+    state = {
+        "sf_opportunity_id": request.sf_opportunity_id,
+        "currency": request.currency,
+        "selected_products": [product.model_dump() for product in request.products],
+        "persist_quote": True,
+    }
+
+    try:
+        result = build_quote_creation_graph(llm_client=create_llm_client()).invoke(state)
+    except Exception as exc:
+        logger.exception(
+            "Quote creation request failed: sf_opportunity_id=%s",
+            request.sf_opportunity_id,
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response = result["response"]
+    record_agent_run(
+        sf_opportunity_id=request.sf_opportunity_id,
+        intent="quote_creation",
+        status=response["status"],
+        steps=response["run_steps"],
+    )
+    logger.info(
+        "Quote creation request completed: sf_opportunity_id=%s oracle_quote_id=%s total=%s",
+        request.sf_opportunity_id,
+        response["oracle_quote_id"],
+        response["pricing"]["total"],
+    )
+    return QuoteCreateResponse(**response)
+
+
+@app.post("/quote/finalize", response_model=QuoteFinalizeResponse)
+def finalize_quote_from_selection(request: QuoteFinalizeRequest) -> QuoteFinalizeResponse:
+    logger.info("Quote finalization requested: oracle_quote_id=%s", request.oracle_quote_id)
+    try:
+        result = _execute_mcp_tool(
+            "finalize_quote",
+            {"oracle_quote_id": request.oracle_quote_id},
+        )
+    except Exception as exc:
+        logger.exception(
+            "Quote finalization failed: oracle_quote_id=%s",
+            request.oracle_quote_id,
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    logger.info(
+        "Quote finalization completed: oracle_quote_id=%s oracle_order_id=%s",
+        result["quote"]["oracle_quote_id"],
+        result["order"]["oracle_order_id"],
+    )
+    return QuoteFinalizeResponse(status="order_placed", **result)
+
+
+@app.get("/orders/{oracle_order_id}")
+def get_order_record(oracle_order_id: str) -> dict:
+    logger.info("Order detail requested: oracle_order_id=%s", oracle_order_id)
+    order = get_order(oracle_order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail=f"Order not found: {oracle_order_id}")
+
+    return order
+
+
+@app.get("/agent-runs")
+def list_agent_run_records(
+    sf_opportunity_id: str | None = None,
+    limit: int = 20,
+) -> dict:
+    logger.info(
+        "Agent run history requested: sf_opportunity_id=%s limit=%s",
+        sf_opportunity_id,
+        limit,
+    )
+    return {
+        "runs": list_agent_runs(
+            sf_opportunity_id=sf_opportunity_id,
+            limit=limit,
+        )
+    }
+
+
+@app.get("/agent-runs/{run_id}")
+def get_agent_run_record(run_id: str) -> dict:
+    logger.info("Agent run detail requested: run_id=%s", run_id)
+    run = get_agent_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"Agent run not found: {run_id}")
+
+    return run
+
+
+def _execute_mcp_tool(tool_name: str, payload: dict) -> dict:
+    engine = create_default_mcp_engine()
+    try:
+        return engine.execute(tool_name, payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -1,0 +1,40 @@
+[project]
+name = "enterprise-ai-agent-platform"
+version = "0.1.0"
+description = "Enterprise AI Agent Platform for Opportunity-to-Quote automation."
+requires-python = ">=3.11"
+dependencies = [
+    "chromadb>=0.5.0",
+    "fastapi>=0.110.0",
+    "httpx>=0.27.0",
+    "langgraph>=1.0.0",
+    "uvicorn[standard]>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools]
+packages = [
+    "apps",
+    "apps.backend",
+    "configs",
+    "services",
+    "services.agent",
+    "services.data",
+    "services.llm",
+    "services.mcp",
+    "services.mcp.tools",
+    "services.rag",
+    "services.tools",
+    "integrations",
+    "integrations.cpq",
+    "integrations.salesforce",
+    "schemas",
+]

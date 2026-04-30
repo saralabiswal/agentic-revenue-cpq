@@ -1,0 +1,11 @@
+.venv/
+.uv-cache/
+.pytest_cache/
+__pycache__/
+
+apps/frontend/node_modules/
+apps/frontend/.next/
+apps/frontend/.npm-cache/
+
+.git/
+.DS_Store

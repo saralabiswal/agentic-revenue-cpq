@@ -1,0 +1,13 @@
+.venv/
+.uv-cache/
+__pycache__/
+.pytest_cache/
+chroma_db/
+app_data/
+
+node_modules/
+.next/
+dist/
+build/
+
+apps/frontend/.npm-cache/
