@@ -1,3 +1,8 @@
+"""Test coverage for rag behavior.
+
+Author: Sarala Biswal
+"""
+
 import json
 
 import httpx
@@ -10,23 +15,30 @@ from services.rag.ingest import SAMPLE_DOCUMENTS, ingest_sample_documents
 
 
 class FakeEmbeddingClient:
+    """Verify fake embedding client behavior."""
     def embed(self, texts: list[str]) -> list[list[float]]:
+        """Verify embed behavior."""
         return [_fake_embedding(text) for text in texts]
 
 
 class FakeRetriever:
+    """Verify fake retriever behavior."""
     def __init__(self) -> None:
+        """Verify   init   behavior."""
         self.calls: list[tuple[str, int]] = []
 
     def retrieve(self, query: str, k: int = 3) -> list[str]:
+        """Verify retrieve behavior."""
         self.calls.append((query, k))
         return ["Sales playbook context", "Pricing rules context"][:k]
 
 
 def test_embedding_client_calls_ollama_embeddings_api() -> None:
+    """Verify embedding client calls ollama embeddings api behavior."""
     captured_payloads: list[dict] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
+        """Verify handler behavior."""
         captured_payloads.append(json.loads(request.content))
         return httpx.Response(200, json={"embedding": [0.1, 0.2, 0.3]})
 
@@ -48,7 +60,9 @@ def test_embedding_client_calls_ollama_embeddings_api() -> None:
 
 
 def test_embedding_client_raises_for_missing_embedding() -> None:
+    """Verify embedding client raises for missing embedding behavior."""
     def handler(_request: httpx.Request) -> httpx.Response:
+        """Verify handler behavior."""
         return httpx.Response(200, json={"done": True})
 
     client = EmbeddingClient(
@@ -61,6 +75,7 @@ def test_embedding_client_raises_for_missing_embedding() -> None:
 
 
 def test_ingestion_persists_sample_documents(tmp_path) -> None:
+    """Verify ingestion persists sample documents behavior."""
     store = VectorStore(persist_directory=tmp_path / "chroma_db")
 
     count = ingest_sample_documents(
@@ -77,6 +92,7 @@ def test_ingestion_persists_sample_documents(tmp_path) -> None:
 
 
 def test_retriever_returns_list_from_vector_store(tmp_path) -> None:
+    """Verify retriever returns list from vector store behavior."""
     store = VectorStore(persist_directory=tmp_path / "chroma_db")
     ingest_sample_documents(
         embedding_client=FakeEmbeddingClient(),  # type: ignore[arg-type]
@@ -94,6 +110,7 @@ def test_retriever_returns_list_from_vector_store(tmp_path) -> None:
 
 
 def test_vector_store_validates_input_lengths(tmp_path) -> None:
+    """Verify vector store validates input lengths behavior."""
     store = VectorStore(persist_directory=tmp_path / "chroma_db")
 
     with pytest.raises(VectorStoreError, match="same length"):
@@ -101,6 +118,7 @@ def test_vector_store_validates_input_lengths(tmp_path) -> None:
 
 
 def test_mcp_search_knowledge_tool_returns_structured_output() -> None:
+    """Verify mcp search knowledge tool returns structured output behavior."""
     retriever = FakeRetriever()
 
     result = search_knowledge("sales playbook", k=2, retriever=retriever)  # type: ignore[arg-type]
@@ -113,6 +131,7 @@ def test_mcp_search_knowledge_tool_returns_structured_output() -> None:
 
 
 def test_registered_mcp_rag_tool_executes_through_engine() -> None:
+    """Verify registered mcp rag tool executes through engine behavior."""
     registry = ToolRegistry()
     register_rag_tools(registry, retriever_factory=lambda: FakeRetriever())  # type: ignore[arg-type]
     engine = MCPExecutionEngine(registry)
@@ -126,6 +145,7 @@ def test_registered_mcp_rag_tool_executes_through_engine() -> None:
 
 
 def _fake_embedding(text: str) -> list[float]:
+    """Verify  fake embedding behavior."""
     normalized = text.lower()
     if "pricing" in normalized:
         return [1.0, 0.0, 0.0]

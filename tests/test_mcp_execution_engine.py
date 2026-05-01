@@ -1,3 +1,8 @@
+"""Test coverage for mcp execution engine behavior.
+
+Author: Sarala Biswal
+"""
+
 import logging
 
 import pytest
@@ -11,6 +16,7 @@ from services.mcp import (
 
 
 def test_execution_engine_runs_registered_tool_through_mcp(caplog: pytest.LogCaptureFixture) -> None:
+    """Verify execution engine runs registered tool through mcp behavior."""
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(
@@ -31,6 +37,7 @@ def test_execution_engine_runs_registered_tool_through_mcp(caplog: pytest.LogCap
 
 
 def test_execution_engine_defaults_to_empty_payload() -> None:
+    """Verify execution engine defaults to empty payload behavior."""
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(
@@ -44,6 +51,7 @@ def test_execution_engine_defaults_to_empty_payload() -> None:
 
 
 def test_execution_engine_rejects_non_dict_payload() -> None:
+    """Verify execution engine rejects non dict payload behavior."""
     engine = MCPExecutionEngine(ToolRegistry())
 
     with pytest.raises(ToolExecutionError, match="payload must be a dictionary"):
@@ -51,7 +59,9 @@ def test_execution_engine_rejects_non_dict_payload() -> None:
 
 
 def test_execution_engine_wraps_tool_errors(caplog: pytest.LogCaptureFixture) -> None:
+    """Verify execution engine wraps tool errors behavior."""
     def failing_tool(_payload: dict) -> dict:
+        """Verify failing tool behavior."""
         raise ValueError("bad integration response")
 
     registry = ToolRegistry()
@@ -66,6 +76,7 @@ def test_execution_engine_wraps_tool_errors(caplog: pytest.LogCaptureFixture) ->
 
 
 def test_execution_engine_rejects_non_dict_tool_result() -> None:
+    """Verify execution engine rejects non dict tool result behavior."""
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(

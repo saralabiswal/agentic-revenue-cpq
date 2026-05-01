@@ -1,3 +1,8 @@
+"""Logging setup shared by backend services and tests.
+
+Author: Sarala Biswal
+"""
+
 import logging
 import os
 
@@ -27,6 +32,7 @@ def configure_logging(level: str | int | None = None) -> int:
 
 
 def _resolve_level(level: str | int) -> int:
+    """Normalize a string or numeric log level into a logging constant."""
     if isinstance(level, int):
         return level
 
@@ -39,6 +45,7 @@ def _resolve_level(level: str | int) -> int:
 
 
 def _configured_handler(logger: logging.Logger) -> logging.Handler | None:
+    """Return the platform-managed log handler when it is already attached."""
     for handler in logger.handlers:
         if getattr(handler, "_enterprise_platform_configured", False):
             return handler

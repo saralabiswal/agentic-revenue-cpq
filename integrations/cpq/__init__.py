@@ -1,3 +1,8 @@
+"""Package marker and exports for integrations.cpq.
+
+Author: Sarala Biswal
+"""
+
 from integrations.cpq.catalog import PRODUCT_CATALOG, ProductCatalogItem, list_catalog_items
 from integrations.cpq.pricing import PricingError, get_pricing
 from integrations.cpq.quote import (

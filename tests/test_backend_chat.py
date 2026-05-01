@@ -1,3 +1,8 @@
+"""Test coverage for backend chat behavior.
+
+Author: Sarala Biswal
+"""
+
 from fastapi.testclient import TestClient
 
 from apps.backend.main import app
@@ -6,6 +11,7 @@ from services.llm import OllamaClient
 
 
 def test_chat_endpoint_creates_quote_from_message() -> None:
+    """Verify chat endpoint creates quote from message behavior."""
     client = TestClient(app)
 
     response = client.post(
@@ -31,6 +37,7 @@ def test_chat_endpoint_creates_quote_from_message() -> None:
 
 
 def test_chat_endpoint_accepts_explicit_opportunity_id() -> None:
+    """Verify chat endpoint accepts explicit opportunity id behavior."""
     client = TestClient(app)
 
     response = client.post(
@@ -46,6 +53,7 @@ def test_chat_endpoint_accepts_explicit_opportunity_id() -> None:
 
 
 def test_chat_endpoint_rejects_empty_message() -> None:
+    """Verify chat endpoint rejects empty message behavior."""
     client = TestClient(app)
 
     response = client.post("/chat", json={"message": ""})
@@ -54,6 +62,7 @@ def test_chat_endpoint_rejects_empty_message() -> None:
 
 
 def test_chat_endpoint_returns_400_for_unknown_opportunity() -> None:
+    """Verify chat endpoint returns 400 for unknown opportunity behavior."""
     client = TestClient(app)
 
     response = client.post(
@@ -68,12 +77,14 @@ def test_chat_endpoint_returns_400_for_unknown_opportunity() -> None:
 
 
 def test_backend_uses_fallback_response_by_default(monkeypatch) -> None:
+    """Verify backend uses fallback response by default behavior."""
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
 
     assert create_llm_client() is None
 
 
 def test_backend_can_enable_ollama_llm_provider(monkeypatch) -> None:
+    """Verify backend can enable ollama llm provider behavior."""
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama.test")
 
@@ -85,6 +96,7 @@ def test_backend_can_enable_ollama_llm_provider(monkeypatch) -> None:
 
 
 def test_recommendation_endpoint_prepares_products_for_review() -> None:
+    """Verify recommendation endpoint prepares products for review behavior."""
     client = TestClient(app)
 
     response = client.post(
@@ -105,6 +117,7 @@ def test_recommendation_endpoint_prepares_products_for_review() -> None:
 
 
 def test_account_and_opportunity_endpoints_support_portfolio_flow() -> None:
+    """Verify account and opportunity endpoints support portfolio flow behavior."""
     client = TestClient(app)
 
     accounts = client.get("/accounts")
@@ -121,6 +134,7 @@ def test_account_and_opportunity_endpoints_support_portfolio_flow() -> None:
 
 
 def test_pricing_endpoint_reprices_selected_products() -> None:
+    """Verify pricing endpoint reprices selected products behavior."""
     client = TestClient(app)
     recommendation = client.post(
         "/quote/recommendations",
@@ -148,6 +162,7 @@ def test_pricing_endpoint_reprices_selected_products() -> None:
 
 
 def test_quote_create_endpoint_creates_quote_from_selection() -> None:
+    """Verify quote create endpoint creates quote from selection behavior."""
     client = TestClient(app)
     recommendation = client.post(
         "/quote/recommendations",
@@ -171,6 +186,7 @@ def test_quote_create_endpoint_creates_quote_from_selection() -> None:
 
 
 def test_quote_history_and_finalize_endpoints_place_order() -> None:
+    """Verify quote history and finalize endpoints place order behavior."""
     client = TestClient(app)
     recommendation = client.post(
         "/quote/recommendations",
@@ -206,6 +222,7 @@ def test_quote_history_and_finalize_endpoints_place_order() -> None:
 
 
 def test_agent_run_history_endpoints_capture_business_actions() -> None:
+    """Verify agent run history endpoints capture business actions behavior."""
     client = TestClient(app)
 
     client.post(

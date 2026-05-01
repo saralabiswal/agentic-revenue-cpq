@@ -1,3 +1,8 @@
+"""Seed data loaders for the demo CRM, CPQ, activity, and order records.
+
+Author: Sarala Biswal
+"""
+
 import sqlite3
 from typing import Any
 
@@ -451,6 +456,7 @@ ORDER_SEEDS: tuple[dict[str, Any], ...] = (
 
 
 def seed_if_empty(connection: sqlite3.Connection) -> None:
+    """Populate demo data only when the database has no accounts yet."""
     has_accounts = connection.execute("SELECT 1 FROM accounts LIMIT 1").fetchone()
     if has_accounts:
         return
@@ -465,6 +471,7 @@ def seed_if_empty(connection: sqlite3.Connection) -> None:
 
 
 def _seed_accounts(connection: sqlite3.Connection) -> None:
+    """Insert seeded Salesforce account records."""
     connection.executemany(
         """
         INSERT INTO accounts (sf_account_id, name, industry, region, segment)
@@ -475,6 +482,7 @@ def _seed_accounts(connection: sqlite3.Connection) -> None:
 
 
 def _seed_opportunities(connection: sqlite3.Connection) -> None:
+    """Insert seeded Salesforce opportunity records."""
     for opportunity in OPPORTUNITIES:
         connection.execute(
             """
@@ -504,6 +512,7 @@ def _seed_opportunities(connection: sqlite3.Connection) -> None:
 
 
 def _seed_products(connection: sqlite3.Connection) -> None:
+    """Insert seeded Oracle CPQ product records."""
     connection.executemany(
         """
         INSERT INTO products (
@@ -526,6 +535,7 @@ def _seed_products(connection: sqlite3.Connection) -> None:
 
 
 def _seed_pricing_rules(connection: sqlite3.Connection) -> None:
+    """Insert seeded CPQ pricing rule records."""
     connection.executemany(
         """
         INSERT INTO pricing_rules (code, label, percent, condition_text)
@@ -549,6 +559,7 @@ def _seed_pricing_rules(connection: sqlite3.Connection) -> None:
 
 
 def _seed_quotes(connection: sqlite3.Connection) -> None:
+    """Insert seeded quote history records."""
     for quote in QUOTE_SEEDS:
         connection.execute(
             """
@@ -587,6 +598,7 @@ def _seed_quotes(connection: sqlite3.Connection) -> None:
 
 
 def _seed_orders(connection: sqlite3.Connection) -> None:
+    """Insert seeded order records."""
     for order in ORDER_SEEDS:
         connection.execute(
             """
@@ -636,6 +648,7 @@ def _seed_orders(connection: sqlite3.Connection) -> None:
 
 
 def _seed_activity(connection: sqlite3.Connection) -> None:
+    """Insert seeded activity timeline records."""
     events = [
         (
             "ACT-SF-OPP-001-001",

@@ -1,3 +1,8 @@
+"""Test coverage for logging behavior.
+
+Author: Sarala Biswal
+"""
+
 import logging
 
 import pytest
@@ -10,10 +15,13 @@ from services.mcp.tools import search_knowledge
 
 
 class LoggingFakeEngine:
+    """Verify logging fake engine behavior."""
     def __init__(self) -> None:
+        """Verify   init   behavior."""
         self.calls: list[str] = []
 
     def execute(self, tool_name: str, payload: dict | None = None) -> dict:
+        """Verify execute behavior."""
         self.calls.append(tool_name)
         payload = payload or {}
         if tool_name == "search_knowledge":
@@ -49,13 +57,16 @@ class LoggingFakeEngine:
 
 
 class LoggingFakeRetriever:
+    """Verify logging fake retriever behavior."""
     def retrieve(self, query: str, k: int = 3) -> list[str]:
+        """Verify retrieve behavior."""
         return ["Pricing rules context", "Sales playbook context"][:k]
 
 
 def test_configure_logging_resolves_configured_level(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify configure logging resolves configured level behavior."""
     root_logger = logging.getLogger()
     previous_level = root_logger.level
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
@@ -71,6 +82,7 @@ def test_configure_logging_resolves_configured_level(
 def test_backend_chat_logs_request_lifecycle(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Verify backend chat logs request lifecycle behavior."""
     client = TestClient(app)
 
     with caplog.at_level(logging.INFO, logger="apps.backend.main"):
@@ -89,6 +101,7 @@ def test_backend_chat_logs_request_lifecycle(
 def test_agent_logs_rag_skip_decision(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Verify agent logs rag skip decision behavior."""
     engine = LoggingFakeEngine()
     graph = build_agent_graph(engine)  # type: ignore[arg-type]
 
@@ -113,6 +126,7 @@ def test_agent_logs_rag_skip_decision(
 def test_agent_logs_rag_retrieval_decision(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Verify agent logs rag retrieval decision behavior."""
     engine = LoggingFakeEngine()
     graph = build_agent_graph(engine)  # type: ignore[arg-type]
 
@@ -137,6 +151,7 @@ def test_agent_logs_rag_retrieval_decision(
 def test_rag_tool_logs_search_result_count(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Verify rag tool logs search result count behavior."""
     with caplog.at_level(logging.INFO, logger="services.mcp.tools.rag_tools"):
         result = search_knowledge(
             "pricing rules",

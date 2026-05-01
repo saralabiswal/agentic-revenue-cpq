@@ -1,3 +1,8 @@
+"""ChromaDB-backed vector store adapter for RAG documents.
+
+Author: Sarala Biswal
+"""
+
 import logging
 from pathlib import Path
 from typing import Any
@@ -13,12 +18,15 @@ class VectorStoreError(ValueError):
 
 
 class VectorStore:
+    """ChromaDB adapter for storing and querying embedded knowledge documents."""
+
     def __init__(
         self,
         persist_directory: str | Path = "./chroma_db",
         collection_name: str = "knowledge",
         client: Any | None = None,
     ) -> None:
+        """Open or create the configured persistent Chroma collection."""
         self.persist_directory = Path(persist_directory)
         self.collection_name = collection_name
         self._client = client or chromadb.PersistentClient(path=str(self.persist_directory))
@@ -30,6 +38,7 @@ class VectorStore:
         documents: list[str],
         embeddings: list[list[float]],
     ) -> None:
+        """Upsert documents and embeddings into the configured collection."""
         if not (len(ids) == len(documents) == len(embeddings)):
             logger.error(
                 "Vector store add rejected: ids=%s documents=%s embeddings=%s",
@@ -55,6 +64,7 @@ class VectorStore:
         )
 
     def query(self, query_embedding: list[float], n_results: int = 3) -> list[str]:
+        """Return the nearest stored documents for a query embedding."""
         if not query_embedding:
             logger.error("Vector store query rejected: empty_embedding=true")
             raise VectorStoreError("query_embedding is required.")

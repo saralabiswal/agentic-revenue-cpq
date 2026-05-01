@@ -1,3 +1,8 @@
+"""Rule-based product recommendation logic for telecom opportunities.
+
+Author: Sarala Biswal
+"""
+
 from typing import Any
 
 from integrations.cpq.catalog import get_catalog_item
@@ -8,6 +13,7 @@ class ProductRecommendationError(ValueError):
 
 
 def recommend_products(opportunity: dict[str, Any]) -> dict[str, Any]:
+    """Build rule-based product recommendations for a Salesforce opportunity."""
     sf_opportunity_id = opportunity.get("sf_opportunity_id")
     if not sf_opportunity_id:
         raise ProductRecommendationError("Salesforce opportunity id is required.")
@@ -129,6 +135,7 @@ def _product(
     reason: str,
     rule_id: str,
 ) -> dict[str, Any]:
+    """Create one normalized product recommendation entry."""
     catalog_item = get_catalog_item(sku)
     if catalog_item is None:
         raise ProductRecommendationError(f"Unknown product SKU: {sku}")
@@ -148,4 +155,5 @@ def _product(
 
 
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
+    """Return whether text contains any keyword in a case-insensitive comparison."""
     return any(keyword in text for keyword in keywords)

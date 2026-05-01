@@ -1,3 +1,8 @@
+"""LangGraph workflows that orchestrate intent analysis, retrieval, MCP tools, and responses.
+
+Author: Sarala Biswal
+"""
+
 import logging
 import re
 
@@ -16,6 +21,7 @@ def build_agent_graph(
     execution_engine: MCPExecutionEngine | None = None,
     llm_client: LLMClient | None = None,
 ):
+    """Build the full opportunity-to-quote LangGraph workflow."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
     graph = StateGraph(AgentState)
@@ -42,6 +48,7 @@ def build_recommendation_graph(
     execution_engine: MCPExecutionEngine | None = None,
     llm_client: LLMClient | None = None,
 ):
+    """Build a recommendation-only LangGraph workflow for sales review."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
     graph = StateGraph(AgentState)
@@ -63,6 +70,7 @@ def build_recommendation_graph(
 
 
 def build_pricing_graph(execution_engine: MCPExecutionEngine | None = None):
+    """Build a pricing-only graph for selected products."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
     graph = StateGraph(AgentState)
@@ -81,6 +89,7 @@ def build_quote_creation_graph(
     execution_engine: MCPExecutionEngine | None = None,
     llm_client: LLMClient | None = None,
 ):
+    """Build a graph that prices selected products and creates a quote."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
     graph = StateGraph(AgentState)
@@ -98,6 +107,7 @@ def build_quote_creation_graph(
 
 
 def _analyze_intent(state: AgentState) -> AgentState:
+    """Extract user intent and opportunity context into graph state."""
     user_input = _extract_user_input(state)
     sf_opportunity_id = _extract_sf_opportunity_id(state)
     logger.info(
@@ -115,6 +125,7 @@ def _analyze_intent(state: AgentState) -> AgentState:
 
 
 def _prepare_selection_recommendation(state: AgentState) -> AgentState:
+    """Convert selected products into the recommendation shape expected by pricing."""
     sf_opportunity_id = _extract_sf_opportunity_id(state)
     selected_products = [
         product
@@ -141,7 +152,10 @@ def _prepare_selection_recommendation(state: AgentState) -> AgentState:
 
 
 def _retrieve_context(engine: MCPExecutionEngine):
+    """Create a graph node that retrieves RAG context when the prompt needs it."""
+
     def node(state: AgentState) -> AgentState:
+        """Retrieve relevant RAG snippets or skip retrieval for non-domain prompts."""
         user_input = state.get("user_input", "")
         if not _should_retrieve_context(user_input):
             logger.info("Agent RAG skipped: reason=no_domain_keyword")
@@ -166,7 +180,10 @@ def _retrieve_context(engine: MCPExecutionEngine):
 
 
 def _get_opportunity(engine: MCPExecutionEngine):
+    """Create a graph node that loads the opportunity through MCP."""
+
     def node(state: AgentState) -> AgentState:
+        """Load the selected Salesforce opportunity into graph state."""
         logger.info(
             "Agent fetching opportunity through MCP: sf_opportunity_id=%s",
             state["sf_opportunity_id"],
@@ -181,7 +198,10 @@ def _get_opportunity(engine: MCPExecutionEngine):
 
 
 def _recommend_products(engine: MCPExecutionEngine):
+    """Create a graph node that calls the CPQ recommendation tool."""
+
     def node(state: AgentState) -> AgentState:
+        """Request CPQ product recommendations for the loaded opportunity."""
         logger.info("Agent requesting product recommendation through MCP")
         recommendation = engine.execute(
             "recommend_products",
@@ -193,7 +213,10 @@ def _recommend_products(engine: MCPExecutionEngine):
 
 
 def _get_pricing(engine: MCPExecutionEngine):
+    """Create a graph node that calls the CPQ pricing tool."""
+
     def node(state: AgentState) -> AgentState:
+        """Price the current recommendation through the MCP pricing tool."""
         logger.info("Agent requesting pricing through MCP")
         pricing = engine.execute(
             "get_pricing",
@@ -205,7 +228,10 @@ def _get_pricing(engine: MCPExecutionEngine):
 
 
 def _create_quote(engine: MCPExecutionEngine):
+    """Create a graph node that calls the CPQ quote creation tool."""
+
     def node(state: AgentState) -> AgentState:
+        """Create a draft quote and keep tool outputs for trace rendering."""
         logger.info("Agent requesting quote creation through MCP")
         payload = {"pricing": state["pricing"]}
         if state.get("persist_quote"):
@@ -226,7 +252,10 @@ def _create_quote(engine: MCPExecutionEngine):
 
 
 def _respond(llm_client: LLMClient | None):
+    """Create a graph node that builds the final full-flow assistant response."""
+
     def node(state: AgentState) -> AgentState:
+        """Build the final response for the recommendation, pricing, and quote flow."""
         quote = state["quote"]
         recommendation = state["recommendation"]
         pricing = state["pricing"]
@@ -267,7 +296,10 @@ def _respond(llm_client: LLMClient | None):
 
 
 def _respond_recommendation(llm_client: LLMClient | None):
+    """Create a graph node that returns recommendation review output."""
+
     def node(state: AgentState) -> AgentState:
+        """Build the review response before a quote is created."""
         recommendation = state["recommendation"]
         pricing = state["pricing"]
         assistant_message = _build_recommendation_fallback_message(recommendation, pricing)
@@ -311,6 +343,7 @@ def _respond_recommendation(llm_client: LLMClient | None):
 
 
 def _respond_pricing(state: AgentState) -> AgentState:
+    """Return pricing response state after selected products are priced."""
     run_steps = _build_run_steps(state, include_quote=False, include_recommendation=False)
     return {
         "run_steps": run_steps,
@@ -325,7 +358,10 @@ def _respond_pricing(state: AgentState) -> AgentState:
 
 
 def _respond_quote_creation(llm_client: LLMClient | None):
+    """Create a graph node that summarizes a newly created quote."""
+
     def node(state: AgentState) -> AgentState:
+        """Build the final response after selected products become a quote."""
         quote = state["quote"]
         pricing = state["pricing"]
         assistant_message = _build_fallback_message(quote, pricing)
@@ -372,6 +408,7 @@ def _build_response_prompt(
     user_input: str,
     retrieved_context: list[str] | None,
 ) -> list[dict]:
+    """Build chat messages for the full quote creation response."""
     product_names = ", ".join(product["name"] for product in products)
     messages = [
         {
@@ -411,6 +448,7 @@ def _build_recommendation_prompt(
     user_input: str,
     retrieved_context: list[str] | None,
 ) -> list[dict]:
+    """Build chat messages that explain recommended products for review."""
     product_names = ", ".join(product["name"] for product in products)
     messages = [
         {
@@ -450,6 +488,7 @@ def _build_quote_creation_prompt(
     quote: dict,
     selected_products: list[dict],
 ) -> list[dict]:
+    """Build chat messages that summarize a created draft quote."""
     product_names = ", ".join(product["name"] for product in selected_products)
     return [
         {
@@ -468,6 +507,7 @@ def _build_quote_creation_prompt(
 
 
 def _build_recommendation_fallback_message(recommendation: dict, pricing: dict) -> dict:
+    """Build a deterministic recommendation message when no LLM is configured."""
     return {
         "role": "assistant",
         "content": (
@@ -479,6 +519,7 @@ def _build_recommendation_fallback_message(recommendation: dict, pricing: dict) 
 
 
 def _build_fallback_message(quote: dict, pricing: dict) -> dict:
+    """Build a deterministic quote creation message when no LLM is configured."""
     return {
         "role": "assistant",
         "content": (
@@ -493,6 +534,7 @@ def _build_run_steps(
     include_quote: bool,
     include_recommendation: bool = True,
 ) -> list[dict[str, str]]:
+    """Create UI trace steps from graph state and completed tool calls."""
     steps: list[dict[str, str]] = []
     if include_recommendation:
         steps.extend(
@@ -553,6 +595,7 @@ def _build_run_steps(
 
 
 def _extract_sf_opportunity_id(state: AgentState) -> str:
+    """Extract the selected Salesforce opportunity id from graph state."""
     if state.get("sf_opportunity_id"):
         return state["sf_opportunity_id"]
 
@@ -566,6 +609,7 @@ def _extract_sf_opportunity_id(state: AgentState) -> str:
 
 
 def _extract_user_input(state: AgentState) -> str:
+    """Extract the most recent user message from graph state."""
     if state.get("user_input"):
         return state["user_input"]
 
@@ -577,6 +621,7 @@ def _extract_user_input(state: AgentState) -> str:
 
 
 def _should_retrieve_context(user_input: str) -> bool:
+    """Decide whether a prompt should trigger knowledge retrieval."""
     normalized = user_input.lower()
     knowledge_keywords = (
         "catalog",

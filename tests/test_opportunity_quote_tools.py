@@ -1,3 +1,8 @@
+"""Test coverage for opportunity quote tools behavior.
+
+Author: Sarala Biswal
+"""
+
 import pytest
 
 from services.mcp import MCPExecutionEngine, ToolExecutionError
@@ -5,6 +10,7 @@ from services.tools import create_default_tool_registry
 
 
 def test_default_tool_registry_registers_opportunity_quote_tools() -> None:
+    """Verify default tool registry registers opportunity quote tools behavior."""
     registry = create_default_tool_registry()
 
     assert registry.names() == [
@@ -23,6 +29,7 @@ def test_default_tool_registry_registers_opportunity_quote_tools() -> None:
 
 
 def test_opportunity_quote_flow_executes_through_mcp_engine() -> None:
+    """Verify opportunity quote flow executes through mcp engine behavior."""
     engine = MCPExecutionEngine(create_default_tool_registry())
 
     opportunity = engine.execute("get_opportunity", {"sf_opportunity_id": "SF-OPP-001"})
@@ -46,6 +53,7 @@ def test_opportunity_quote_flow_executes_through_mcp_engine() -> None:
 
 
 def test_account_opportunity_quote_and_order_lifecycle_tools() -> None:
+    """Verify account opportunity quote and order lifecycle tools behavior."""
     engine = MCPExecutionEngine(create_default_tool_registry())
 
     accounts = engine.execute("list_accounts", {})
@@ -73,6 +81,7 @@ def test_account_opportunity_quote_and_order_lifecycle_tools() -> None:
 
 
 def test_get_opportunity_tool_requires_opportunity_id() -> None:
+    """Verify get opportunity tool requires opportunity id behavior."""
     engine = MCPExecutionEngine(create_default_tool_registry())
 
     with pytest.raises(ToolExecutionError, match="Tool execution failed"):
@@ -80,6 +89,7 @@ def test_get_opportunity_tool_requires_opportunity_id() -> None:
 
 
 def test_recommend_products_tool_requires_opportunity_dict() -> None:
+    """Verify recommend products tool requires opportunity dict behavior."""
     engine = MCPExecutionEngine(create_default_tool_registry())
 
     with pytest.raises(ToolExecutionError, match="Tool execution failed"):
@@ -87,6 +97,7 @@ def test_recommend_products_tool_requires_opportunity_dict() -> None:
 
 
 def test_get_pricing_tool_requires_recommendation_dict() -> None:
+    """Verify get pricing tool requires recommendation dict behavior."""
     engine = MCPExecutionEngine(create_default_tool_registry())
 
     with pytest.raises(ToolExecutionError, match="Tool execution failed"):
@@ -94,6 +105,7 @@ def test_get_pricing_tool_requires_recommendation_dict() -> None:
 
 
 def test_create_quote_tool_requires_pricing_dict() -> None:
+    """Verify create quote tool requires pricing dict behavior."""
     engine = MCPExecutionEngine(create_default_tool_registry())
 
     with pytest.raises(ToolExecutionError, match="Tool execution failed"):

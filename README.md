@@ -1,5 +1,7 @@
 # Enterprise AI Agent Platform
 
+**Author:** Sarala Biswal
+
 An agentic command center that sits between Salesforce CRM and Oracle CPQ to help a sales rep move from opportunity context to product recommendation, pricing, quote creation, and order placement with explainability at every step.
 
 The current demo uses a Telecom / Network Infrastructure scenario with NetApp-aligned product recommendations.

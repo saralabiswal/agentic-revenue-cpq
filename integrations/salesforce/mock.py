@@ -1,3 +1,8 @@
+"""Mock Salesforce CRM access layer backed by seeded business data.
+
+Author: Sarala Biswal
+"""
+
 from typing import Any
 
 from services.data import (
@@ -12,14 +17,17 @@ class OpportunityNotFoundError(LookupError):
 
 
 def list_accounts() -> list[dict[str, Any]]:
+    """Return Salesforce accounts from the mock CRM data source."""
     return repository_list_accounts()
 
 
 def list_opportunities(sf_account_id: str | None = None) -> list[dict[str, Any]]:
+    """Return Salesforce opportunities, optionally filtered by account."""
     return repository_list_opportunities(sf_account_id)
 
 
 def get_opportunity(sf_opportunity_id: str) -> dict[str, Any]:
+    """Return a Salesforce opportunity or raise when it cannot be found."""
     opportunity = repository_get_opportunity(sf_opportunity_id)
     if opportunity is None:
         raise OpportunityNotFoundError(f"Opportunity not found: {sf_opportunity_id}")

@@ -1,3 +1,8 @@
+"""Test coverage for architecture guardrails behavior.
+
+Author: Sarala Biswal
+"""
+
 from pathlib import Path
 
 
@@ -5,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_agent_does_not_import_integrations_directly() -> None:
+    """Verify agent does not import integrations directly behavior."""
     for path in (PROJECT_ROOT / "services" / "agent").glob("*.py"):
         source = path.read_text()
 
@@ -13,6 +19,7 @@ def test_agent_does_not_import_integrations_directly() -> None:
 
 
 def test_agent_does_not_call_llm_providers_directly() -> None:
+    """Verify agent does not call llm providers directly behavior."""
     for path in (PROJECT_ROOT / "services" / "agent").glob("*.py"):
         source = path.read_text()
 
@@ -22,6 +29,7 @@ def test_agent_does_not_call_llm_providers_directly() -> None:
 
 
 def test_agent_does_not_import_rag_directly() -> None:
+    """Verify agent does not import rag directly behavior."""
     for path in (PROJECT_ROOT / "services" / "agent").glob("*.py"):
         source = path.read_text()
 
@@ -32,6 +40,7 @@ def test_agent_does_not_import_rag_directly() -> None:
 
 
 def test_backend_routes_through_agent_not_tools_or_integrations() -> None:
+    """Verify backend routes through agent not tools or integrations behavior."""
     source = (PROJECT_ROOT / "apps" / "backend" / "main.py").read_text()
 
     assert "from services.agent" in source
@@ -41,6 +50,7 @@ def test_backend_routes_through_agent_not_tools_or_integrations() -> None:
 
 
 def test_tool_wrappers_are_the_integration_boundary() -> None:
+    """Verify tool wrappers are the integration boundary behavior."""
     source = (PROJECT_ROOT / "services" / "tools" / "opportunity_quote.py").read_text()
 
     assert "from integrations.cpq" in source
@@ -49,6 +59,7 @@ def test_tool_wrappers_are_the_integration_boundary() -> None:
 
 
 def test_rag_is_exposed_only_through_mcp_tool() -> None:
+    """Verify rag is exposed only through mcp tool behavior."""
     source = (PROJECT_ROOT / "services" / "mcp" / "tools" / "rag_tools.py").read_text()
 
     assert "from services.rag" in source

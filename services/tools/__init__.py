@@ -1,3 +1,8 @@
+"""Package marker and exports for services.tools.
+
+Author: Sarala Biswal
+"""
+
 from services.tools.opportunity_quote import (
     create_default_tool_registry,
     create_quote_tool,

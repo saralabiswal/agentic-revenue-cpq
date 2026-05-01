@@ -1,3 +1,8 @@
+"""Mock Oracle CPQ quote and order lifecycle operations.
+
+Author: Sarala Biswal
+"""
+
 from copy import deepcopy
 import re
 from typing import Any
@@ -19,6 +24,7 @@ class QuoteLifecycleError(ValueError):
 
 
 def create_quote(pricing: dict[str, Any], persist: bool = False) -> dict[str, Any]:
+    """Create a draft quote, optionally persisting it in the repository."""
     sf_opportunity_id = pricing.get("sf_opportunity_id")
     if not sf_opportunity_id:
         raise QuoteCreationError("Salesforce opportunity id is required.")
@@ -49,10 +55,12 @@ def create_quote(pricing: dict[str, Any], persist: bool = False) -> dict[str, An
 
 
 def list_quotes(sf_opportunity_id: str) -> list[dict[str, Any]]:
+    """Return all quote versions for a Salesforce opportunity."""
     return repository_list_quotes(sf_opportunity_id)
 
 
 def finalize_quote(oracle_quote_id: str) -> dict[str, Any]:
+    """Accept a quote and create or return the matching order."""
     try:
         result = finalize_quote_record(oracle_quote_id)
     except ValueError as exc:
@@ -65,16 +73,19 @@ def finalize_quote(oracle_quote_id: str) -> dict[str, Any]:
 
 
 def list_orders(sf_opportunity_id: str | None = None) -> list[dict[str, Any]]:
+    """Return placed orders, optionally filtered by Salesforce opportunity."""
     return repository_list_orders(sf_opportunity_id)
 
 
 def reset_quote_lifecycle() -> None:
+    """Reset seeded quote and order state for deterministic tests."""
     from services.data import reset_business_data
 
     reset_business_data()
 
 
 def _record_number(source_id: str) -> str:
+    """Derive the stable numeric portion used in Oracle quote identifiers."""
     match = re.search(r"(\d+)$", source_id)
     if match:
         return f"{int(match.group(1)):03d}"

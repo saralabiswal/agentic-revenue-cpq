@@ -1,9 +1,15 @@
+"""Test coverage for integration opportunity to quote behavior.
+
+Author: Sarala Biswal
+"""
+
 from fastapi.testclient import TestClient
 
 from apps.backend.main import app
 
 
 def test_opportunity_to_quote_integration_flow() -> None:
+    """Verify opportunity to quote integration flow behavior."""
     client = TestClient(app)
 
     response = client.post(

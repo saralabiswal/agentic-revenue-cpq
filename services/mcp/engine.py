@@ -1,3 +1,8 @@
+"""Execution boundary that invokes registered MCP-style tools.
+
+Author: Sarala Biswal
+"""
+
 import logging
 
 from services.mcp.registry import ToolInput, ToolOutput, ToolRegistry
@@ -8,15 +13,19 @@ class ToolExecutionError(RuntimeError):
 
 
 class MCPExecutionEngine:
+    """Executes registered MCP tools with validation and structured logging."""
+
     def __init__(
         self,
         registry: ToolRegistry,
         logger: logging.Logger | None = None,
     ) -> None:
+        """Create an execution engine for a specific tool registry."""
         self._registry = registry
         self._logger = logger or logging.getLogger(__name__)
 
     def execute(self, tool_name: str, payload: ToolInput | None = None) -> ToolOutput:
+        """Execute one registered tool and require a dictionary result."""
         tool_payload = payload or {}
         if not isinstance(tool_payload, dict):
             raise ToolExecutionError("Tool payload must be a dictionary.")

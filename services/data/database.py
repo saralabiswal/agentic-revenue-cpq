@@ -1,3 +1,8 @@
+"""SQLite connection, initialization, and reset helpers for business data.
+
+Author: Sarala Biswal
+"""
+
 import os
 import sqlite3
 from pathlib import Path
@@ -8,6 +13,7 @@ DEFAULT_DATABASE_PATH = PROJECT_ROOT / "app_data" / "business.sqlite3"
 
 
 def get_database_path() -> Path:
+    """Resolve the SQLite database path from configuration or defaults."""
     configured_path = os.getenv("BUSINESS_DB_PATH")
     if configured_path:
         return Path(configured_path)
@@ -16,6 +22,7 @@ def get_database_path() -> Path:
 
 
 def connect() -> sqlite3.Connection:
+    """Open a SQLite connection configured for row-style access."""
     database_path = get_database_path()
     database_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(database_path)
@@ -25,6 +32,7 @@ def connect() -> sqlite3.Connection:
 
 
 def initialize_database() -> None:
+    """Create the database schema and seed records when needed."""
     from services.data.seed import seed_if_empty
 
     with connect() as connection:
@@ -33,6 +41,7 @@ def initialize_database() -> None:
 
 
 def reset_database() -> None:
+    """Delete and rebuild the local SQLite business database."""
     database_path = get_database_path()
     if database_path.exists():
         database_path.unlink()
@@ -40,6 +49,7 @@ def reset_database() -> None:
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:
+    """Create all database tables required by the demo workflow."""
     connection.executescript(
         """
         CREATE TABLE IF NOT EXISTS accounts (

@@ -1,3 +1,8 @@
+"""Sample knowledge ingestion workflow for product, pricing, and playbook documents.
+
+Author: Sarala Biswal
+"""
+
 import logging
 from dataclasses import dataclass
 
@@ -10,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class KnowledgeDocument:
+    """Knowledge base document with a stable identifier and searchable content."""
     id: str
     text: str
 
@@ -70,6 +76,7 @@ def ingest_sample_documents(
     embedding_client: EmbeddingClient | None = None,
     vector_store: VectorStore | None = None,
 ) -> int:
+    """Embed and store sample product, pricing, and playbook documents."""
     client = embedding_client or EmbeddingClient()
     store = vector_store or VectorStore()
     ids = [document.id for document in SAMPLE_DOCUMENTS]

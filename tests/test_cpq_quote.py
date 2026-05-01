@@ -1,3 +1,8 @@
+"""Test coverage for cpq quote behavior.
+
+Author: Sarala Biswal
+"""
+
 import pytest
 
 from integrations.cpq import (
@@ -14,6 +19,7 @@ from integrations.salesforce import get_opportunity
 
 
 def test_create_quote_returns_draft_quote() -> None:
+    """Verify create quote returns draft quote behavior."""
     pricing = get_pricing(recommend_products(get_opportunity("SF-OPP-001")))
 
     quote = create_quote(pricing)
@@ -36,6 +42,7 @@ def test_create_quote_returns_draft_quote() -> None:
 
 
 def test_create_quote_returns_copy_of_line_items() -> None:
+    """Verify create quote returns copy of line items behavior."""
     pricing = get_pricing(recommend_products(get_opportunity("SF-OPP-001")))
     quote = create_quote(pricing)
     quote["line_items"][0]["name"] = "Changed"
@@ -46,6 +53,7 @@ def test_create_quote_returns_copy_of_line_items() -> None:
 
 
 def test_create_quote_can_persist_multiple_versions() -> None:
+    """Verify create quote can persist multiple versions behavior."""
     pricing = get_pricing(recommend_products(get_opportunity("SF-OPP-001")))
 
     first_quote = create_quote(pricing, persist=True)
@@ -61,6 +69,7 @@ def test_create_quote_can_persist_multiple_versions() -> None:
 
 
 def test_finalize_quote_places_order_and_supersedes_other_drafts() -> None:
+    """Verify finalize quote places order and supersedes other drafts behavior."""
     pricing = get_pricing(recommend_products(get_opportunity("SF-OPP-001")))
     first_quote = create_quote(pricing, persist=True)
     second_quote = create_quote(pricing, persist=True)
@@ -81,21 +90,25 @@ def test_finalize_quote_places_order_and_supersedes_other_drafts() -> None:
 
 
 def test_finalize_quote_rejects_superseded_quote() -> None:
+    """Verify finalize quote rejects superseded quote behavior."""
     with pytest.raises(QuoteLifecycleError, match="Cannot finalize superseded quote"):
         finalize_quote("ORA-Q-001-000")
 
 
 def test_create_quote_requires_opportunity_id() -> None:
+    """Verify create quote requires opportunity id behavior."""
     with pytest.raises(QuoteCreationError, match="Salesforce opportunity id is required"):
         create_quote({"line_items": [{"sku": "NTAP-AFF-A-SERIES"}], "total": 75000.0})
 
 
 def test_create_quote_requires_line_items() -> None:
+    """Verify create quote requires line items behavior."""
     with pytest.raises(QuoteCreationError, match="Quote line items are required"):
         create_quote({"sf_opportunity_id": "SF-OPP-001", "line_items": [], "total": 75000.0})
 
 
 def test_create_quote_requires_total() -> None:
+    """Verify create quote requires total behavior."""
     with pytest.raises(QuoteCreationError, match="Quote total is required"):
         create_quote(
             {

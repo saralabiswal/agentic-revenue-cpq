@@ -1,3 +1,8 @@
+"""Test coverage for cpq recommendation behavior.
+
+Author: Sarala Biswal
+"""
+
 import pytest
 
 from integrations.cpq import ProductRecommendationError, recommend_products
@@ -5,6 +10,7 @@ from integrations.salesforce import get_opportunity
 
 
 def test_recommend_products_returns_base_products_for_opportunity() -> None:
+    """Verify recommend products returns base products for opportunity behavior."""
     opportunity = get_opportunity("SF-OPP-001")
 
     recommendation = recommend_products(opportunity)
@@ -25,6 +31,7 @@ def test_recommend_products_returns_base_products_for_opportunity() -> None:
 
 
 def test_recommend_products_uses_defaults_for_optional_fields() -> None:
+    """Verify recommend products uses defaults for optional fields behavior."""
     recommendation = recommend_products({"sf_opportunity_id": "SF-OPP-002"})
 
     assert recommendation["currency"] == "USD"
@@ -35,5 +42,6 @@ def test_recommend_products_uses_defaults_for_optional_fields() -> None:
 
 
 def test_recommend_products_requires_opportunity_id() -> None:
+    """Verify recommend products requires opportunity id behavior."""
     with pytest.raises(ProductRecommendationError, match="Salesforce opportunity id is required"):
         recommend_products({})

@@ -1,3 +1,8 @@
+"""Package marker and exports for services.data.
+
+Author: Sarala Biswal
+"""
+
 from services.data.database import get_database_path, initialize_database
 from services.data.repositories import (
     create_quote_record,

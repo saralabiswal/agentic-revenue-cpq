@@ -1,3 +1,8 @@
+"""Repository layer for accounts, opportunities, quotes, orders, activity, and agent runs.
+
+Author: Sarala Biswal
+"""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -9,10 +14,12 @@ from services.data.database import connect, initialize_database, reset_database
 
 
 def reset_business_data() -> None:
+    """Reset all seeded CRM, CPQ, activity, and agent run data."""
     reset_database()
 
 
 def list_accounts() -> list[dict[str, Any]]:
+    """Return Salesforce accounts from the mock CRM data source."""
     initialize_database()
     with connect() as connection:
         rows = connection.execute(
@@ -36,6 +43,7 @@ def list_accounts() -> list[dict[str, Any]]:
 
 
 def list_opportunities(sf_account_id: str | None = None) -> list[dict[str, Any]]:
+    """Return Salesforce opportunities, optionally filtered by account."""
     initialize_database()
     params: tuple[Any, ...] = ()
     where = ""
@@ -60,6 +68,7 @@ def list_opportunities(sf_account_id: str | None = None) -> list[dict[str, Any]]
 
 
 def get_opportunity(sf_opportunity_id: str) -> dict[str, Any] | None:
+    """Return a Salesforce opportunity or raise when it cannot be found."""
     initialize_database()
     with connect() as connection:
         row = connection.execute(
@@ -80,6 +89,7 @@ def get_opportunity(sf_opportunity_id: str) -> dict[str, Any] | None:
 
 
 def list_quotes(sf_opportunity_id: str) -> list[dict[str, Any]]:
+    """Return all quote versions for a Salesforce opportunity."""
     initialize_database()
     with connect() as connection:
         rows = connection.execute(
@@ -97,6 +107,7 @@ def list_quotes(sf_opportunity_id: str) -> list[dict[str, Any]]:
 
 
 def create_quote_record(pricing: dict[str, Any]) -> dict[str, Any]:
+    """Persist a CPQ quote and its line items, then record quote activity."""
     initialize_database()
     sf_opportunity_id = str(pricing["sf_opportunity_id"])
     oracle_quote_id = _next_oracle_quote_id(sf_opportunity_id)
@@ -176,6 +187,7 @@ def create_quote_record(pricing: dict[str, Any]) -> dict[str, Any]:
 
 
 def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
+    """Accept a quote, supersede older drafts, and persist the resulting order."""
     initialize_database()
     placed_at = _timestamp()
     with connect() as connection:
@@ -293,6 +305,7 @@ def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
 
 
 def list_orders(sf_opportunity_id: str | None = None) -> list[dict[str, Any]]:
+    """Return placed orders, optionally filtered by Salesforce opportunity."""
     initialize_database()
     params: tuple[Any, ...] = ()
     where = ""
@@ -311,6 +324,7 @@ def list_orders(sf_opportunity_id: str | None = None) -> list[dict[str, Any]]:
 
 
 def get_order(oracle_order_id: str) -> dict[str, Any] | None:
+    """Return one Oracle order by id, or None when it is absent."""
     initialize_database()
     with connect() as connection:
         row = connection.execute(
@@ -327,6 +341,7 @@ def list_activity(
     sf_opportunity_id: str | None = None,
     sf_account_id: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Return business activity events filtered by account or opportunity."""
     initialize_database()
     filters: list[str] = []
     params: list[Any] = []
@@ -360,6 +375,7 @@ def record_agent_run(
     steps: list[dict[str, Any]],
     sf_opportunity_id: str | None = None,
 ) -> dict[str, Any]:
+    """Persist an auditable agent run and its execution steps."""
     initialize_database()
     run_id = f"RUN-{uuid.uuid4().hex[:12].upper()}"
     created_at = _timestamp()
@@ -421,6 +437,7 @@ def list_agent_runs(
     sf_opportunity_id: str | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
+    """Return recent agent run summaries for audit and UI history."""
     initialize_database()
     params: tuple[Any, ...] = ()
     where = ""
@@ -446,6 +463,7 @@ def list_agent_runs(
 
 
 def get_agent_run(run_id: str) -> dict[str, Any] | None:
+    """Return a single agent run with its execution steps."""
     initialize_database()
     with connect() as connection:
         run_row = connection.execute(
@@ -481,6 +499,7 @@ def record_activity(
     oracle_quote_id: str | None = None,
     oracle_order_id: str | None = None,
 ) -> dict[str, Any]:
+    """Persist a business activity event for the timeline."""
     initialize_database()
     created_at = _timestamp()
     with connect() as connection:
@@ -501,6 +520,7 @@ def record_activity(
 
 
 def _opportunity_from_row(row: Any) -> dict[str, Any]:
+    """Convert a joined opportunity row into the API response shape."""
     sf_opportunity_id = row["sf_opportunity_id"]
     with connect() as connection:
         requirement_rows = connection.execute(
@@ -540,6 +560,7 @@ def _opportunity_from_row(row: Any) -> dict[str, Any]:
 
 
 def _quote_from_row(connection: Any, row: Any) -> dict[str, Any]:
+    """Load a quote row together with its line items."""
     line_items = connection.execute(
         """
         SELECT sku, name, category, quantity, term_months, billing_model,
@@ -554,12 +575,14 @@ def _quote_from_row(connection: Any, row: Any) -> dict[str, Any]:
 
 
 def _quote_from_mapping(row: Any, line_items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Normalize persisted quote fields into the API response shape."""
     quote = _row(row)
     quote["line_items"] = line_items
     return quote
 
 
 def _order_from_row(connection: Any, row: Any) -> dict[str, Any]:
+    """Load an order row together with its line items."""
     line_items = connection.execute(
         """
         SELECT sku, name, category, quantity, term_months, billing_model,
@@ -576,6 +599,7 @@ def _order_from_row(connection: Any, row: Any) -> dict[str, Any]:
 
 
 def _next_oracle_quote_id(sf_opportunity_id: str) -> str:
+    """Generate the next versioned Oracle quote id for an opportunity."""
     with connect() as connection:
         rows = connection.execute(
             """
@@ -596,6 +620,7 @@ def _next_oracle_quote_id(sf_opportunity_id: str) -> str:
 
 
 def _oracle_order_id_for_quote(oracle_quote_id: str) -> str:
+    """Derive the Oracle order id that corresponds to a quote id."""
     if oracle_quote_id.startswith("ORA-Q-"):
         return oracle_quote_id.replace("ORA-Q-", "ORA-O-", 1)
 
@@ -610,6 +635,7 @@ def _oracle_order_id_for_quote(oracle_quote_id: str) -> str:
 
 
 def _record_number(source_id: str) -> str:
+    """Derive the stable numeric portion used in Oracle quote identifiers."""
     match = re.search(r"(\d+)$", source_id)
     if match:
         return f"{int(match.group(1)):03d}"
@@ -631,6 +657,7 @@ def _insert_activity(
     oracle_quote_id: str | None = None,
     oracle_order_id: str | None = None,
 ) -> dict[str, Any]:
+    """Insert one activity event using already-open repository transaction state."""
     sf_account_id = sf_account_id or _sf_account_id_for_opportunity(
         sf_opportunity_id,
         connection=connection,
@@ -665,6 +692,7 @@ def _insert_activity(
 
 
 def _row(row: Any) -> dict[str, Any]:
+    """Convert a SQLite row into a plain dictionary."""
     return dict(row)
 
 
@@ -673,6 +701,7 @@ def _sf_account_id_for_opportunity(
     *,
     connection: Any | None = None,
 ) -> str | None:
+    """Look up the account id that owns an opportunity."""
     if not sf_opportunity_id:
         return None
 
@@ -694,4 +723,5 @@ def _sf_account_id_for_opportunity(
 
 
 def _timestamp() -> str:
+    """Return a UTC ISO timestamp for persisted audit fields."""
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")

@@ -1,3 +1,8 @@
+"""Package marker and exports for services.llm.
+
+Author: Sarala Biswal
+"""
+
 from services.llm.client import LLMClient, LLMMessage, LLMResponse
 from services.llm.factory import create_llm_client
 from services.llm.ollama import OllamaClient, OllamaClientError

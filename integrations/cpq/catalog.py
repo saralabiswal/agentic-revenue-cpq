@@ -1,8 +1,14 @@
+"""Mock Oracle CPQ product catalog used by recommendation and pricing flows.
+
+Author: Sarala Biswal
+"""
+
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class ProductCatalogItem:
+    """Catalog record describing a sellable CPQ product and its pricing metadata."""
     sku: str
     name: str
     category: str
@@ -72,8 +78,10 @@ PRODUCT_CATALOG: dict[str, ProductCatalogItem] = {
 
 
 def get_catalog_item(sku: str) -> ProductCatalogItem | None:
+    """Return one catalog item by SKU, or None when the SKU is unknown."""
     return PRODUCT_CATALOG.get(sku)
 
 
 def list_catalog_items() -> list[ProductCatalogItem]:
+    """Return all mock CPQ catalog items in their configured order."""
     return list(PRODUCT_CATALOG.values())

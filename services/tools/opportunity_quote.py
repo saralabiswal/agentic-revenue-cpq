@@ -1,3 +1,8 @@
+"""Tool adapters that expose Salesforce, CPQ, activity, and RAG operations through MCP.
+
+Author: Sarala Biswal
+"""
+
 from typing import Any
 
 from integrations.cpq import (
@@ -15,10 +20,12 @@ from services.mcp.tools import register_rag_tools
 
 
 def list_accounts_tool(_payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that lists Salesforce accounts."""
     return {"accounts": list_accounts()}
 
 
 def list_opportunities_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that lists Salesforce opportunities with optional account filtering."""
     sf_account_id = payload.get("sf_account_id")
     return {
         "opportunities": list_opportunities(
@@ -28,11 +35,13 @@ def list_opportunities_tool(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_opportunity_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that fetches one Salesforce opportunity."""
     sf_opportunity_id = _required(payload, "sf_opportunity_id")
     return get_opportunity(str(sf_opportunity_id))
 
 
 def recommend_products_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that recommends products and records recommendation activity."""
     opportunity = _required(payload, "opportunity")
     if not isinstance(opportunity, dict):
         raise ValueError("opportunity must be a dictionary.")
@@ -49,6 +58,7 @@ def recommend_products_tool(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_pricing_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that calculates CPQ pricing."""
     recommendation = _required(payload, "recommendation")
     if not isinstance(recommendation, dict):
         raise ValueError("recommendation must be a dictionary.")
@@ -57,6 +67,7 @@ def get_pricing_tool(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def create_quote_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that creates a draft CPQ quote."""
     pricing = _required(payload, "pricing")
     if not isinstance(pricing, dict):
         raise ValueError("pricing must be a dictionary.")
@@ -65,21 +76,25 @@ def create_quote_tool(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_quotes_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that lists quote versions for an opportunity."""
     sf_opportunity_id = _required(payload, "sf_opportunity_id")
     return {"quotes": list_quotes(str(sf_opportunity_id))}
 
 
 def finalize_quote_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that accepts a quote and places an order."""
     oracle_quote_id = _required(payload, "oracle_quote_id")
     return finalize_quote(str(oracle_quote_id))
 
 
 def list_orders_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that lists placed orders."""
     sf_opportunity_id = payload.get("sf_opportunity_id")
     return {"orders": list_orders(str(sf_opportunity_id) if sf_opportunity_id else None)}
 
 
 def list_activity_tool(payload: dict[str, Any]) -> dict[str, Any]:
+    """MCP handler that lists activity timeline events."""
     sf_opportunity_id = payload.get("sf_opportunity_id")
     sf_account_id = payload.get("sf_account_id")
     return {
@@ -91,6 +106,7 @@ def list_activity_tool(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def register_opportunity_quote_tools(registry: ToolRegistry) -> ToolRegistry:
+    """Register all opportunity-to-quote business tools in the MCP registry."""
     registry.register(
         ToolDefinition(
             name="list_accounts",
@@ -165,11 +181,13 @@ def register_opportunity_quote_tools(registry: ToolRegistry) -> ToolRegistry:
 
 
 def create_default_tool_registry() -> ToolRegistry:
+    """Create the default registry containing business and RAG tools."""
     registry = register_opportunity_quote_tools(ToolRegistry())
     return register_rag_tools(registry)
 
 
 def _required(payload: dict[str, Any], key: str) -> Any:
+    """Read a required payload key or raise a clear validation error."""
     value = payload.get(key)
     if value is None:
         raise ValueError(f"{key} is required.")

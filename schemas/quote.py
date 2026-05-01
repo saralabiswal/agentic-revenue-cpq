@@ -1,22 +1,31 @@
+"""Pydantic request and response contracts for quote orchestration APIs.
+
+Author: Sarala Biswal
+"""
+
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class AccountListResponse(BaseModel):
+    """Response wrapper for Salesforce account list results."""
     accounts: list[dict[str, Any]]
 
 
 class OpportunityListResponse(BaseModel):
+    """Response wrapper for Salesforce opportunity list results."""
     opportunities: list[dict[str, Any]]
 
 
 class ActivityListResponse(BaseModel):
+    """Response wrapper for timeline activity events."""
     sf_opportunity_id: str | None = None
     activity: list[dict[str, Any]]
 
 
 class ProductSelection(BaseModel):
+    """Selected product payload used for pricing and quote creation."""
     sku: str
     name: str
     category: str | None = None
@@ -30,6 +39,7 @@ class ProductSelection(BaseModel):
 
 
 class RecommendationRequest(BaseModel):
+    """Request to recommend products and estimate pricing for an opportunity."""
     sf_opportunity_id: str = "SF-OPP-001"
     message: str = (
         "Recommend NetApp-aligned products for this telecom opportunity "
@@ -38,6 +48,7 @@ class RecommendationRequest(BaseModel):
 
 
 class RecommendationResponse(BaseModel):
+    """Recommendation result returned for sales rep review."""
     status: str
     message: str
     opportunity: dict[str, Any]
@@ -48,12 +59,14 @@ class RecommendationResponse(BaseModel):
 
 
 class PricingRequest(BaseModel):
+    """Request to reprice a selected set of products."""
     sf_opportunity_id: str
     currency: str = "USD"
     products: list[ProductSelection] = Field(min_length=1)
 
 
 class PricingResponse(BaseModel):
+    """Pricing result returned after CPQ calculation."""
     status: str
     products: list[dict[str, Any]]
     pricing: dict[str, Any]
@@ -61,12 +74,14 @@ class PricingResponse(BaseModel):
 
 
 class QuoteCreateRequest(BaseModel):
+    """Request to create a draft CPQ quote from selected products."""
     sf_opportunity_id: str
     currency: str = "USD"
     products: list[ProductSelection] = Field(min_length=1)
 
 
 class QuoteCreateResponse(BaseModel):
+    """Quote creation response with persisted quote and run trace details."""
     status: str
     message: str
     oracle_quote_id: str
@@ -77,15 +92,18 @@ class QuoteCreateResponse(BaseModel):
 
 
 class QuoteHistoryResponse(BaseModel):
+    """Response wrapper for quote history attached to an opportunity."""
     sf_opportunity_id: str
     quotes: list[dict[str, Any]]
 
 
 class QuoteFinalizeRequest(BaseModel):
+    """Request to accept a quote and place an order."""
     oracle_quote_id: str
 
 
 class QuoteFinalizeResponse(BaseModel):
+    """Finalization response containing the accepted quote and placed order."""
     status: str
     quote: dict[str, Any]
     order: dict[str, Any]

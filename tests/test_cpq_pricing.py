@@ -1,3 +1,8 @@
+"""Test coverage for cpq pricing behavior.
+
+Author: Sarala Biswal
+"""
+
 import pytest
 
 from integrations.cpq import PricingError, get_pricing, recommend_products
@@ -5,6 +10,7 @@ from integrations.salesforce import get_opportunity
 
 
 def test_get_pricing_returns_line_items_and_total() -> None:
+    """Verify get pricing returns line items and total behavior."""
     recommendation = recommend_products(get_opportunity("SF-OPP-001"))
 
     pricing = get_pricing(recommendation)
@@ -27,6 +33,7 @@ def test_get_pricing_returns_line_items_and_total() -> None:
 
 
 def test_get_pricing_scales_by_quantity_and_term() -> None:
+    """Verify get pricing scales by quantity and term behavior."""
     pricing = get_pricing(
         {
             "sf_opportunity_id": "SF-OPP-002",
@@ -47,11 +54,13 @@ def test_get_pricing_scales_by_quantity_and_term() -> None:
 
 
 def test_get_pricing_requires_products() -> None:
+    """Verify get pricing requires products behavior."""
     with pytest.raises(PricingError, match="Recommended products are required"):
         get_pricing({"sf_opportunity_id": "SF-OPP-002", "products": []})
 
 
 def test_get_pricing_rejects_unknown_sku() -> None:
+    """Verify get pricing rejects unknown sku behavior."""
     with pytest.raises(PricingError, match="Unknown product SKU"):
         get_pricing(
             {

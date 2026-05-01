@@ -1,3 +1,8 @@
+"""Test coverage for ollama client behavior.
+
+Author: Sarala Biswal
+"""
+
 import json
 
 import httpx
@@ -7,9 +12,11 @@ from services.llm import OllamaClient, OllamaClientError
 
 
 def test_ollama_client_posts_chat_request_and_returns_message() -> None:
+    """Verify ollama client posts chat request and returns message behavior."""
     captured_payload: dict | None = None
 
     def handler(request: httpx.Request) -> httpx.Response:
+        """Verify handler behavior."""
         nonlocal captured_payload
         captured_payload = json.loads(request.content)
 
@@ -58,7 +65,9 @@ def test_ollama_client_posts_chat_request_and_returns_message() -> None:
 
 
 def test_ollama_client_raises_for_missing_message() -> None:
+    """Verify ollama client raises for missing message behavior."""
     def handler(_request: httpx.Request) -> httpx.Response:
+        """Verify handler behavior."""
         return httpx.Response(200, json={"done": True})
 
     client = OllamaClient(
@@ -71,7 +80,9 @@ def test_ollama_client_raises_for_missing_message() -> None:
 
 
 def test_ollama_client_raises_for_http_error() -> None:
+    """Verify ollama client raises for http error behavior."""
     def handler(_request: httpx.Request) -> httpx.Response:
+        """Verify handler behavior."""
         return httpx.Response(500, json={"error": "model failed"})
 
     client = OllamaClient(

@@ -1,3 +1,8 @@
+"""FastAPI entry point exposing account, opportunity, quote, order, and agent run APIs.
+
+Author: Sarala Biswal
+"""
+
 import logging
 import os
 
@@ -59,12 +64,14 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Return a lightweight backend health response."""
     logger.info("Health check requested")
     return {"status": "ok"}
 
 
 @app.get("/accounts", response_model=AccountListResponse)
 def list_account_records() -> AccountListResponse:
+    """Return account records for the frontend account selector."""
     logger.info("Account list requested")
     result = _execute_mcp_tool("list_accounts", {})
     return AccountListResponse(accounts=result["accounts"])
@@ -72,6 +79,7 @@ def list_account_records() -> AccountListResponse:
 
 @app.get("/opportunities", response_model=OpportunityListResponse)
 def list_opportunity_records(sf_account_id: str | None = None) -> OpportunityListResponse:
+    """Return opportunities, optionally scoped to one account."""
     logger.info("Opportunity list requested: sf_account_id=%s", sf_account_id)
     payload = {"sf_account_id": sf_account_id} if sf_account_id else {}
     result = _execute_mcp_tool("list_opportunities", payload)
@@ -83,6 +91,7 @@ def list_opportunity_records(sf_account_id: str | None = None) -> OpportunityLis
     response_model=OpportunityListResponse,
 )
 def list_account_opportunity_records(sf_account_id: str) -> OpportunityListResponse:
+    """Return opportunities for one account and record the portfolio view."""
     logger.info("Account opportunity list requested: sf_account_id=%s", sf_account_id)
     record_activity(
         sf_account_id=sf_account_id,
@@ -97,6 +106,7 @@ def list_account_opportunity_records(sf_account_id: str) -> OpportunityListRespo
 
 @app.get("/opportunities/{sf_opportunity_id}")
 def get_opportunity_record(sf_opportunity_id: str) -> dict:
+    """Return one opportunity and record that it was viewed."""
     logger.info("Opportunity detail requested: sf_opportunity_id=%s", sf_opportunity_id)
     opportunity = _execute_mcp_tool(
         "get_opportunity",
@@ -117,6 +127,7 @@ def get_opportunity_record(sf_opportunity_id: str) -> dict:
     response_model=QuoteHistoryResponse,
 )
 def list_quote_records(sf_opportunity_id: str) -> QuoteHistoryResponse:
+    """Return quote versions for an opportunity."""
     logger.info("Quote history requested: sf_opportunity_id=%s", sf_opportunity_id)
     result = _execute_mcp_tool("list_quotes", {"sf_opportunity_id": sf_opportunity_id})
     return QuoteHistoryResponse(
@@ -130,6 +141,7 @@ def list_quote_records(sf_opportunity_id: str) -> QuoteHistoryResponse:
     response_model=ActivityListResponse,
 )
 def list_activity_records(sf_opportunity_id: str) -> ActivityListResponse:
+    """Return activity timeline events for an opportunity."""
     logger.info("Activity requested: sf_opportunity_id=%s", sf_opportunity_id)
     result = _execute_mcp_tool(
         "list_activity",
@@ -143,6 +155,7 @@ def list_activity_records(sf_opportunity_id: str) -> ActivityListResponse:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
+    """Run the full chat-driven opportunity-to-quote workflow."""
     logger.info(
         "Chat request received: has_sf_opportunity_id=%s message_length=%s",
         bool(request.sf_opportunity_id),
@@ -186,6 +199,7 @@ def chat(request: ChatRequest) -> ChatResponse:
 
 @app.post("/quote/recommendations", response_model=RecommendationResponse)
 def recommend_quote(request: RecommendationRequest) -> RecommendationResponse:
+    """Recommend products and pricing without creating a quote."""
     logger.info(
         "Recommendation request received: sf_opportunity_id=%s message_length=%s",
         request.sf_opportunity_id,
@@ -228,6 +242,7 @@ def recommend_quote(request: RecommendationRequest) -> RecommendationResponse:
 
 @app.post("/quote/pricing", response_model=PricingResponse)
 def price_quote(request: PricingRequest) -> PricingResponse:
+    """Reprice the currently selected products."""
     logger.info(
         "Pricing request received: sf_opportunity_id=%s product_count=%s",
         request.sf_opportunity_id,
@@ -275,6 +290,7 @@ def price_quote(request: PricingRequest) -> PricingResponse:
 
 @app.post("/quote/create", response_model=QuoteCreateResponse)
 def create_quote_from_selection(request: QuoteCreateRequest) -> QuoteCreateResponse:
+    """Create a persisted quote from reviewed product selections."""
     logger.info(
         "Quote creation request received: sf_opportunity_id=%s product_count=%s",
         request.sf_opportunity_id,
@@ -314,6 +330,7 @@ def create_quote_from_selection(request: QuoteCreateRequest) -> QuoteCreateRespo
 
 @app.post("/quote/finalize", response_model=QuoteFinalizeResponse)
 def finalize_quote_from_selection(request: QuoteFinalizeRequest) -> QuoteFinalizeResponse:
+    """Accept a quote and place the matching order."""
     logger.info("Quote finalization requested: oracle_quote_id=%s", request.oracle_quote_id)
     try:
         result = _execute_mcp_tool(
@@ -337,6 +354,7 @@ def finalize_quote_from_selection(request: QuoteFinalizeRequest) -> QuoteFinaliz
 
 @app.get("/orders/{oracle_order_id}")
 def get_order_record(oracle_order_id: str) -> dict:
+    """Return one placed order by Oracle order id."""
     logger.info("Order detail requested: oracle_order_id=%s", oracle_order_id)
     order = get_order(oracle_order_id)
     if order is None:
@@ -350,6 +368,7 @@ def list_agent_run_records(
     sf_opportunity_id: str | None = None,
     limit: int = 20,
 ) -> dict:
+    """Return recent agent run audit records."""
     logger.info(
         "Agent run history requested: sf_opportunity_id=%s limit=%s",
         sf_opportunity_id,
@@ -365,6 +384,7 @@ def list_agent_run_records(
 
 @app.get("/agent-runs/{run_id}")
 def get_agent_run_record(run_id: str) -> dict:
+    """Return one detailed agent run audit record."""
     logger.info("Agent run detail requested: run_id=%s", run_id)
     run = get_agent_run(run_id)
     if run is None:
@@ -374,6 +394,7 @@ def get_agent_run_record(run_id: str) -> dict:
 
 
 def _execute_mcp_tool(tool_name: str, payload: dict) -> dict:
+    """Execute one MCP tool and translate failures into HTTP errors."""
     engine = create_default_mcp_engine()
     try:
         return engine.execute(tool_name, payload)

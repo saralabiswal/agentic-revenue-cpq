@@ -1,7 +1,13 @@
+"""Typed state contract passed between LangGraph agent nodes.
+
+Author: Sarala Biswal
+"""
+
 from typing import Any, TypedDict
 
 
 class AgentState(TypedDict, total=False):
+    """Shared LangGraph state containing user input, business records, tool outputs, and responses."""
     intent: str
     messages: list[dict[str, Any]]
     user_input: str

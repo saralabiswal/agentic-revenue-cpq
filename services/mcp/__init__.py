@@ -1,3 +1,8 @@
+"""Package marker and exports for services.mcp.
+
+Author: Sarala Biswal
+"""
+
 from services.mcp.engine import MCPExecutionEngine, ToolExecutionError
 from services.mcp.registry import (
     ToolDefinition,

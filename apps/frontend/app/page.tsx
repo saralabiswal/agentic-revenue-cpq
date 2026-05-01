@@ -1,3 +1,8 @@
+/**
+ * Next.js client workbench for the opportunity-to-quote command center.
+ *
+ * @author Sarala Biswal
+ */
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -218,6 +223,7 @@ type AgentWorkbenchModel = {
 const defaultCommand =
   "Recommend NetApp-aligned products for this telecom opportunity, prepare pricing, and explain the quote path.";
 
+/** Render the command center and coordinate account, opportunity, recommendation, quote, and order state. */
 export default function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -617,6 +623,7 @@ export default function Home() {
           <div className="topbar-content">
             <p className="eyebrow">Enterprise AI Agent Platform</p>
             <h1>Deal Orchestration Command Center</h1>
+            <p className="author-line">Author: Sarala Biswal</p>
             <p className="product-punchline">
               Governed agentic orchestration for enterprise revenue workflows: reason with
               LLMs, ground decisions with RAG, execute through MCP tools, and move cleanly
@@ -968,6 +975,7 @@ export default function Home() {
   );
 }
 
+/** Render one system ownership tile in the architecture map. */
 function SystemCard({
   accent,
   code,
@@ -990,6 +998,7 @@ function SystemCard({
   );
 }
 
+/** Render a lane title with its short operational summary. */
 function LaneHeader({
   badge,
   badgeClass,
@@ -1012,6 +1021,7 @@ function LaneHeader({
   );
 }
 
+/** Render the currently selected account and opportunity context. */
 function SelectedContextBand({
   account,
   order,
@@ -1094,6 +1104,7 @@ function SelectedContextBand({
   );
 }
 
+/** Render the central agent workbench status, steps, and current output. */
 function AgentWorkbench({
   action,
   activity,
@@ -1207,6 +1218,7 @@ function AgentWorkbench({
   );
 }
 
+/** Render editable product recommendations and pricing controls. */
 function RecommendedProductsPanel({
   isBusy,
   lineItemBySku,
@@ -1317,6 +1329,7 @@ function RecommendedProductsPanel({
   );
 }
 
+/** Render the latest quote as a compact CPQ document view. */
 function QuoteDocument({
   isBusy,
   onFinalize,
@@ -1359,6 +1372,7 @@ function QuoteDocument({
   );
 }
 
+/** Render the placed order summary document. */
 function OrderDocument({ order }: { order: OrderRecord }) {
   return (
     <section className="lane-section document-panel order-document">
@@ -1385,6 +1399,7 @@ function OrderDocument({ order }: { order: OrderRecord }) {
   );
 }
 
+/** Render key-value metadata above quote and order documents. */
 function DocumentHeader({ items }: { items: Array<[string, string]> }) {
   return (
     <div className="document-header-grid">
@@ -1398,6 +1413,7 @@ function DocumentHeader({ items }: { items: Array<[string, string]> }) {
   );
 }
 
+/** Render priced line items for quote and order documents. */
 function DocumentLineTable({
   currency,
   lines,
@@ -1433,6 +1449,7 @@ function DocumentLineTable({
   );
 }
 
+/** Render one label-value item in a summary strip. */
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -1442,6 +1459,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Render one recommendation decision statement. */
 function Decision({ label, value }: { label: string; value: string }) {
   return (
     <article className="decision-card">
@@ -1451,6 +1469,7 @@ function Decision({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Render a compact grid of business context details. */
 function DetailGrid({ items }: { items: Array<[string, string]> }) {
   return (
     <dl className="detail-grid">
@@ -1464,6 +1483,7 @@ function DetailGrid({ items }: { items: Array<[string, string]> }) {
   );
 }
 
+/** Render the trace, payloads, and governance contracts for the current flow. */
 function ArchitectureView({
   activity,
   pricing,
@@ -1540,6 +1560,7 @@ function ArchitectureView({
   );
 }
 
+/** Render a formatted JSON payload block. */
 function PayloadPanel({ title, payload }: { title: string; payload: unknown }) {
   return (
     <div className="payload-panel">
@@ -1549,6 +1570,7 @@ function PayloadPanel({ title, payload }: { title: string; payload: unknown }) {
   );
 }
 
+/** Render one platform contract or governance rule. */
 function ContractItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -1558,6 +1580,7 @@ function ContractItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Fetch JSON from the backend API and surface HTTP failures as errors. */
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`);
   if (!response.ok) {
@@ -1568,6 +1591,7 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/** Post JSON to the backend API and parse the JSON response. */
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -1585,6 +1609,7 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/** Build architecture trace steps from the selected state and agent outputs. */
 function buildTraceSteps({
   activity,
   command,
@@ -1708,6 +1733,7 @@ function buildTraceSteps({
   ];
 }
 
+/** Merge current and incoming run steps without duplicating step ids. */
 function mergeRunSteps(current: RunStep[], next: RunStep[]) {
   const byId = new Map(current.map((step) => [step.id, step]));
   for (const step of next) {
@@ -1716,6 +1742,7 @@ function mergeRunSteps(current: RunStep[], next: RunStep[]) {
   return Array.from(byId.values());
 }
 
+/** Create a timestamped summary of the most recent agent action. */
 function createAgentAction(
   kind: AgentActionKind,
   title: string,
@@ -1729,6 +1756,7 @@ function createAgentAction(
   };
 }
 
+/** Choose the agent action that should drive the current workbench state. */
 function resolveActiveAgentAction({
   action,
   latestQuote,
@@ -1771,6 +1799,7 @@ function resolveActiveAgentAction({
   return null;
 }
 
+/** Build the view model for the central agent workbench. */
 function buildAgentWorkbenchModel({
   action,
   activity,
@@ -2007,6 +2036,7 @@ function buildAgentWorkbenchModel({
   };
 }
 
+/** Render contextual workbench content for recommendation, quote, order, or ready states. */
 function renderWorkbenchContext({
   action,
   activity,
@@ -2323,6 +2353,7 @@ function renderWorkbenchContext({
   );
 }
 
+/** Choose the quote that is currently actionable in the UI. */
 function getActiveQuote({
   finalizableQuote,
   latestQuote,
@@ -2344,6 +2375,7 @@ function getActiveQuote({
   return latestQuote ?? finalizableQuote ?? [...quotes].reverse().find(isFinalizableQuote) ?? null;
 }
 
+/** Find the latest activity event matching the requested type and object id. */
 function findActivityEvent(
   activity: ActivityEvent[],
   eventType: string,
@@ -2365,6 +2397,7 @@ function findActivityEvent(
   });
 }
 
+/** Return priced line items that correspond to selected products. */
 function getSelectedLineItems(pricing: Pricing | null, selectedProducts: Product[]) {
   if (!pricing) {
     return [];
@@ -2378,6 +2411,7 @@ function getSelectedLineItems(pricing: Pricing | null, selectedProducts: Product
   return pricing.line_items.filter((line) => selectedSkus.has(line.sku));
 }
 
+/** Group opportunity requirements into readable signal categories. */
 function groupOpportunitySignals(requirements: string[]): SignalGroup[] {
   const definitions = [
     {
@@ -2456,6 +2490,7 @@ function groupOpportunitySignals(requirements: string[]): SignalGroup[] {
   return visibleGroups;
 }
 
+/** Summarize opportunity signals and recommended products for the workbench. */
 function buildAgentInterpretation(signalGroups: SignalGroup[], products: Product[]) {
   if (products.length > 0) {
     const ruleCount = new Set(products.map((product) => product.rule_id).filter(Boolean)).size;
@@ -2465,6 +2500,7 @@ function buildAgentInterpretation(signalGroups: SignalGroup[], products: Product
   return `${signalGroups.length} signal groups ready for recommendation`;
 }
 
+/** Summarize the pricing and product strategy behind a recommendation. */
 function buildRecommendationStrategy(products: Product[], pricing: Pricing | null) {
   if (pricing) {
     return `${pricing.discounts.length} discount rule(s), quote-ready total ${formatCurrency(pricing.total, pricing.currency)}`;
@@ -2476,6 +2512,7 @@ function buildRecommendationStrategy(products: Product[], pricing: Pricing | nul
   return "Awaiting recommendation run";
 }
 
+/** Infer the command intent from the sales rep command text. */
 function resolveCommandIntent(command: string): CommandIntent {
   const normalized = command.trim().toLowerCase();
   if (!normalized) {
@@ -2505,6 +2542,7 @@ function resolveCommandIntent(command: string): CommandIntent {
   return null;
 }
 
+/** Return the primary command button label for the current status and intent. */
 function commandButtonLabel(status: string, intent: CommandIntent) {
   if (status === "running") {
     return "Recommending...";
@@ -2528,10 +2566,12 @@ function commandButtonLabel(status: string, intent: CommandIntent) {
   return "Execute";
 }
 
+/** Return whether a quote can still be accepted into an order. */
 function isFinalizableQuote(quote: QuoteRecord) {
   return quote.status !== "SUPERSEDED" && quote.status !== "ACCEPTED";
 }
 
+/** Choose the next guided action for the selected deal state. */
 function buildNextBestAction({
   finalizableQuote,
   opportunity,
@@ -2564,6 +2604,7 @@ function buildNextBestAction({
   return `Review ${selectedProducts.length} selected products, then type "Create quote".`;
 }
 
+/** Build the command text and intent for the next guided action. */
 function buildSuggestedCommand({
   finalizableQuote,
   opportunity,
@@ -2614,6 +2655,7 @@ function buildSuggestedCommand({
   };
 }
 
+/** Build the backend recommendation prompt from the command and selected opportunity. */
 function buildRecommendationRequestMessage(command: string, opportunity: Opportunity | null) {
   const baseCommand = command || defaultCommand;
   if (!opportunity) {
@@ -2631,6 +2673,7 @@ function buildRecommendationRequestMessage(command: string, opportunity: Opportu
   ].join(" ");
 }
 
+/** Shorten enterprise record ids for dense UI surfaces. */
 function displayRecordId(value?: string | null) {
   if (!value || value === "-") {
     return value ?? "-";
@@ -2645,6 +2688,7 @@ function displayRecordId(value?: string | null) {
     .replace(/^SF-OPP-(\d+)$/, "SF-O-$1");
 }
 
+/** Shorten all known record ids inside a free-form message. */
 function displayRecordIdsInText(value: string) {
   return value
     .replace(/\bORA-QUOTE-SF-OPP-(\d+)-(\d+)\b/g, "ORA-Q-$1-$2")
@@ -2655,10 +2699,12 @@ function displayRecordIdsInText(value: string) {
     .replace(/\bSF-OPP-(\d+)\b/g, "SF-O-$1");
 }
 
+/** Normalize unknown caught values into a displayable error message. */
 function errorMessage(caught: unknown) {
   return caught instanceof Error ? caught.message : "Unable to complete request.";
 }
 
+/** Format money values using the selected currency. */
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
     currency,
@@ -2667,6 +2713,7 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount);
 }
 
+/** Format ISO timestamps for the sales workbench. */
 function formatDateTime(value?: string) {
   if (!value) {
     return "-";
@@ -2686,6 +2733,7 @@ function formatDateTime(value?: string) {
   }).format(date);
 }
 
+/** Trim assistant responses for compact workbench display. */
 function compactAssistantMessage(message: string) {
   const cleaned = message.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
   if (cleaned.length <= 180) {
@@ -2695,6 +2743,7 @@ function compactAssistantMessage(message: string) {
   return `${cleaned.slice(0, 177).trim()}...`;
 }
 
+/** Serialize payload data for the architecture trace panels. */
 function formatPayload(payload: unknown) {
   if (payload === null || payload === undefined) {
     return "-";

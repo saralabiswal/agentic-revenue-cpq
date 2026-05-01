@@ -1,3 +1,8 @@
+"""Mock Oracle CPQ pricing engine for recommended product selections.
+
+Author: Sarala Biswal
+"""
+
 from typing import Any
 
 from integrations.cpq.catalog import get_catalog_item
@@ -8,6 +13,7 @@ class PricingError(ValueError):
 
 
 def get_pricing(recommendation: dict[str, Any]) -> dict[str, Any]:
+    """Calculate subtotal, discounts, and total for a recommendation payload."""
     products = [
         product
         for product in recommendation.get("products", [])
@@ -36,6 +42,7 @@ def get_pricing(recommendation: dict[str, Any]) -> dict[str, Any]:
 
 
 def _price_product(product: dict[str, Any]) -> dict[str, Any]:
+    """Convert one recommended product into a priced CPQ line item."""
     sku = product.get("sku")
     catalog_item = get_catalog_item(str(sku))
     if catalog_item is None:
@@ -70,6 +77,7 @@ def _calculate_discounts(
     line_items: list[dict[str, Any]],
     recommendation: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    """Calculate all applicable quote discounts from opportunity and line-item context."""
     subtotal = round(sum(item["net_price"] for item in line_items), 2)
     term_months = max(int(item.get("term_months", 12)) for item in line_items)
     discounts: list[dict[str, Any]] = []

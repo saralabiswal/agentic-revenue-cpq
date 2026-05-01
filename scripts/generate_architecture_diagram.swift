@@ -1,3 +1,7 @@
+// Swift script that renders the README architecture diagram asset.
+//
+// Author: Sarala Biswal
+
 #!/usr/bin/env swift
 
 import AppKit

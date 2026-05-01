@@ -1,3 +1,8 @@
+"""MCP tool wrappers that expose RAG retrieval to the agent.
+
+Author: Sarala Biswal
+"""
+
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -16,6 +21,7 @@ def search_knowledge(
     k: int = 3,
     retriever: Retriever | None = None,
 ) -> dict[str, Any]:
+    """Retrieve knowledge snippets for a natural-language query."""
     if not query:
         raise ValueError("query is required.")
 
@@ -39,6 +45,7 @@ def search_knowledge_tool(
     payload: dict[str, Any],
     retriever_factory: RetrieverFactory | None = None,
 ) -> dict[str, Any]:
+    """MCP handler that validates and executes a knowledge search."""
     query = payload.get("query")
     if not isinstance(query, str) or not query:
         raise ValueError("query is required.")
@@ -52,7 +59,10 @@ def register_rag_tools(
     registry: ToolRegistry,
     retriever_factory: RetrieverFactory | None = None,
 ) -> ToolRegistry:
+    """Register RAG search tools in the MCP registry."""
+
     def handler(payload: dict[str, Any]) -> dict[str, Any]:
+        """Bind the optional retriever factory to the registered MCP handler."""
         return search_knowledge_tool(payload, retriever_factory=retriever_factory)
 
     registry.register(

@@ -1,8 +1,14 @@
+"""Test coverage for agent graph behavior.
+
+Author: Sarala Biswal
+"""
+
 from services.agent import build_agent_graph
 from services.llm import LLMClient
 
 
 def test_agent_graph_runs_opportunity_to_quote_flow() -> None:
+    """Verify agent graph runs opportunity to quote flow behavior."""
     graph = build_agent_graph()
 
     result = graph.invoke(
@@ -27,6 +33,7 @@ def test_agent_graph_runs_opportunity_to_quote_flow() -> None:
 
 
 def test_agent_graph_uses_default_opportunity_id_for_demo_flow() -> None:
+    """Verify agent graph uses default opportunity id for demo flow behavior."""
     graph = build_agent_graph()
 
     result = graph.invoke(
@@ -38,11 +45,15 @@ def test_agent_graph_uses_default_opportunity_id_for_demo_flow() -> None:
 
 
 def test_agent_graph_executes_tools_in_expected_mcp_order() -> None:
+    """Verify agent graph executes tools in expected mcp order behavior."""
     class RecordingEngine:
+        """Verify recording engine behavior."""
         def __init__(self) -> None:
+            """Verify   init   behavior."""
             self.calls: list[tuple[str, dict]] = []
 
         def execute(self, tool_name: str, payload: dict | None = None) -> dict:
+            """Verify execute behavior."""
             self.calls.append((tool_name, payload or {}))
             if tool_name == "get_opportunity":
                 return {"sf_opportunity_id": payload["sf_opportunity_id"]}
@@ -85,11 +96,15 @@ def test_agent_graph_executes_tools_in_expected_mcp_order() -> None:
 
 
 def test_agent_graph_generates_response_through_llm_client() -> None:
+    """Verify agent graph generates response through llm client behavior."""
     class RecordingLLMClient(LLMClient):
+        """Verify recording l l m client behavior."""
         def __init__(self) -> None:
+            """Verify   init   behavior."""
             self.messages: list[dict] | None = None
 
         def chat(self, messages: list[dict]) -> dict:
+            """Run the full chat-driven opportunity-to-quote workflow."""
             self.messages = messages
             return {
                 "role": "assistant",
@@ -115,11 +130,15 @@ def test_agent_graph_generates_response_through_llm_client() -> None:
 
 
 def test_agent_graph_retrieves_context_through_mcp_and_augments_llm_prompt() -> None:
+    """Verify agent graph retrieves context through mcp and augments llm prompt behavior."""
     class RecordingEngine:
+        """Verify recording engine behavior."""
         def __init__(self) -> None:
+            """Verify   init   behavior."""
             self.calls: list[tuple[str, dict]] = []
 
         def execute(self, tool_name: str, payload: dict | None = None) -> dict:
+            """Verify execute behavior."""
             self.calls.append((tool_name, payload or {}))
             if tool_name == "search_knowledge":
                 return {
@@ -153,10 +172,13 @@ def test_agent_graph_retrieves_context_through_mcp_and_augments_llm_prompt() -> 
             raise AssertionError(f"Unexpected tool: {tool_name}")
 
     class RecordingLLMClient(LLMClient):
+        """Verify recording l l m client behavior."""
         def __init__(self) -> None:
+            """Verify   init   behavior."""
             self.messages: list[dict] | None = None
 
         def chat(self, messages: list[dict]) -> dict:
+            """Run the full chat-driven opportunity-to-quote workflow."""
             self.messages = messages
             return {
                     "role": "assistant",
