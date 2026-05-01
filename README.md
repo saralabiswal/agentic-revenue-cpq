@@ -2,34 +2,53 @@
 
 **Author:** Sarala Biswal
 
-An agentic command center that sits between Salesforce CRM and Oracle CPQ to help a sales rep move from opportunity context to product recommendation, pricing, quote creation, and order placement with explainability at every step.
+## About
 
-The current demo uses a Telecom / Network Infrastructure scenario with NetApp-aligned product recommendations.
+Enterprise AI Agent Platform is a demo opportunity-to-quote command center that connects Salesforce CRM, RAG-backed knowledge retrieval, LangGraph agent orchestration, MCP-style tool execution, and Oracle CPQ quote/order lifecycle automation.
 
-## Business Problem
+The current demo showcases a Telecom / Network Infrastructure use case with NetApp-aligned product recommendations.
 
-Enterprise sales teams often work across multiple systems to complete one customer motion:
+---
 
-- Account and opportunity context live in Salesforce CRM.
-- Product configuration, pricing, quotes, and orders live in Oracle CPQ.
-- Product recommendations depend on catalog knowledge, pricing rules, sales playbooks, and opportunity-specific requirements.
-- Manual handoffs make it hard to explain why products were recommended, which tools were called, and what changed between a quote and an order.
+### **Business Problem**
 
-The business need is a governed middle layer that can understand the sales intent, retrieve relevant knowledge, execute the right enterprise tools, and show a clear audit trail without letting the AI bypass system boundaries.
+Enterprise sales workflows are often fragmented across multiple systems:
 
-## Proposed Solution
+* Salesforce CRM holds account and opportunity data.
+* Oracle CPQ manages product configuration, pricing, quotes, and orders.
+* Product recommendations rely on a mix of catalog data, pricing rules, sales playbooks, and deal-specific requirements.
 
-The Enterprise AI Agent Platform provides a slim agentic workflow for the sales rep:
+These disconnected steps create challenges:
 
-1. Select a Salesforce Account.
-2. Select one of its Salesforce Opportunities.
-3. Ask the command assistant to recommend products, or use the guided next-best-action button.
-4. Let the agent retrieve knowledge, call CPQ recommendation and pricing tools, and explain the result.
-5. Choose the products to include.
-6. Create an Oracle CPQ Quote.
-7. Finalize the accepted quote into an Oracle CPQ Order.
+* Manual handoffs slow down the process.
+* Limited visibility into why certain products are recommended.
+* Lack of traceability across tool usage and transitions from quote to order.
 
-The key product idea is not just automation. The platform shows the middle layer: what the agent decided, which MCP tools executed, what context was retrieved from RAG, and which source system owns each business object.
+There is a clear need for a governed orchestration layer that can interpret sales intent, retrieve relevant knowledge, execute enterprise tools appropriately, and maintain a transparent audit trail—without bypassing system boundaries.
+
+---
+
+### **Proposed Solution**
+
+The platform introduces a streamlined, agent-powered workflow:
+
+1. Select a Salesforce account.
+2. Choose a related opportunity.
+3. Request product recommendations or use a guided “next best action.”
+4. Let the agent retrieve knowledge, invoke CPQ tools for recommendations and pricing, and explain the results.
+5. Select desired products.
+6. Generate a quote in Oracle CPQ.
+7. Convert the finalized quote into an order.
+
+Beyond automation, the platform emphasizes visibility and control. It clearly surfaces:
+
+* Agent decisions and reasoning
+* MCP-style tool executions
+* Retrieved context via RAG
+* Ownership of each business object across systems
+
+The result is a transparent, governed middle layer that connects systems while keeping humans informed and in control.
+
 
 ## Architecture
 
