@@ -12,6 +12,18 @@ from typing import Any
 
 from services.data.database import connect, initialize_database, reset_database
 
+# Repository flow:
+# - Public functions return plain dictionaries ready for API/tool responses.
+# - Each public read/write initializes the local database before touching data.
+# - Helper functions convert SQLite rows into nested business objects expected by
+#   the frontend and agent traces.
+
+
+# ---------------------------------------------------------------------------
+# CRM-style account and opportunity reads.
+# These functions back the Salesforce mock integration.
+# ---------------------------------------------------------------------------
+
 
 def reset_business_data() -> None:
     """Reset all seeded CRM, CPQ, activity, and agent run data."""
@@ -22,6 +34,8 @@ def list_accounts() -> list[dict[str, Any]]:
     """Return Salesforce accounts from the mock CRM data source."""
     initialize_database()
     with connect() as connection:
+        # Aggregate opportunity counts and open pipeline so the frontend account
+        # selector can show portfolio-level context.
         rows = connection.execute(
             """
             SELECT
@@ -48,12 +62,15 @@ def list_opportunities(sf_account_id: str | None = None) -> list[dict[str, Any]]
     params: tuple[Any, ...] = ()
     where = ""
     if sf_account_id:
+        # Keep the WHERE clause parameterized; only the static clause text changes.
         where = "WHERE o.sf_account_id = ?"
         params = (sf_account_id,)
 
     with connect() as connection:
         rows = connection.execute(
             f"""
+            -- Join account fields so one API object contains both the opportunity
+            -- and the account context the UI needs.
             SELECT o.*, a.name AS account_name, a.industry AS account_industry,
                    a.region AS account_region, a.segment AS account_segment
             FROM opportunities o
@@ -88,6 +105,12 @@ def get_opportunity(sf_opportunity_id: str) -> dict[str, Any] | None:
     return _opportunity_from_row(row)
 
 
+# ---------------------------------------------------------------------------
+# CPQ quote and order lifecycle.
+# These functions back the Oracle CPQ mock integration.
+# ---------------------------------------------------------------------------
+
+
 def list_quotes(sf_opportunity_id: str) -> list[dict[str, Any]]:
     """Return all quote versions for a Salesforce opportunity."""
     initialize_database()
@@ -109,6 +132,7 @@ def list_quotes(sf_opportunity_id: str) -> list[dict[str, Any]]:
 def create_quote_record(pricing: dict[str, Any]) -> dict[str, Any]:
     """Persist a CPQ quote and its line items, then record quote activity."""
     initialize_database()
+    # Quote ids are versioned per Salesforce opportunity, e.g. ORA-Q-001-002.
     sf_opportunity_id = str(pricing["sf_opportunity_id"])
     oracle_quote_id = _next_oracle_quote_id(sf_opportunity_id)
     created_at = _timestamp()
@@ -128,6 +152,7 @@ def create_quote_record(pricing: dict[str, Any]) -> dict[str, Any]:
     }
 
     with connect() as connection:
+        # Insert the quote header first, then the line items under the same id.
         connection.execute(
             """
             INSERT INTO quotes (
@@ -172,6 +197,8 @@ def create_quote_record(pricing: dict[str, Any]) -> dict[str, Any]:
                 for item in line_items
             ],
         )
+        # Activity events are written inside the same transaction as the quote
+        # so the timeline does not drift from persisted CPQ state.
         _insert_activity(
             connection,
             sf_opportunity_id=sf_opportunity_id,
@@ -191,6 +218,7 @@ def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
     initialize_database()
     placed_at = _timestamp()
     with connect() as connection:
+        # Finalization starts from the quote header and then loads its line items.
         quote_row = connection.execute(
             "SELECT * FROM quotes WHERE oracle_quote_id = ?",
             (oracle_quote_id,),
@@ -202,6 +230,8 @@ def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
         if quote["status"] == "SUPERSEDED":
             raise ValueError(f"Cannot finalize superseded quote: {oracle_quote_id}")
 
+        # The operation is idempotent: if an order already exists for the quote,
+        # return it rather than creating a duplicate order.
         existing_order = connection.execute(
             "SELECT * FROM orders WHERE oracle_quote_id = ?",
             (oracle_quote_id,),
@@ -212,6 +242,8 @@ def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
                 "order": _order_from_row(connection, existing_order),
             }
 
+        # Accepting one quote supersedes all other open draft versions for the
+        # same opportunity, matching a simple CPQ quote-version lifecycle.
         connection.execute(
             """
             UPDATE quotes
@@ -240,6 +272,8 @@ def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
             "placed_at": placed_at,
             "line_items": quote["line_items"],
         }
+        # Order line items are copied from the accepted quote so the order keeps
+        # the exact priced configuration that was approved.
         connection.execute(
             """
             INSERT INTO orders (
@@ -304,12 +338,19 @@ def finalize_quote_record(oracle_quote_id: str) -> dict[str, Any] | None:
     }
 
 
+# ---------------------------------------------------------------------------
+# Activity timeline and agent audit history.
+# Activity explains business events; agent runs explain orchestration steps.
+# ---------------------------------------------------------------------------
+
+
 def list_orders(sf_opportunity_id: str | None = None) -> list[dict[str, Any]]:
     """Return placed orders, optionally filtered by Salesforce opportunity."""
     initialize_database()
     params: tuple[Any, ...] = ()
     where = ""
     if sf_opportunity_id:
+        # Optional filter supports both "all orders" and opportunity detail views.
         where = "WHERE sf_opportunity_id = ?"
         params = (sf_opportunity_id,)
 
@@ -346,6 +387,7 @@ def list_activity(
     filters: list[str] = []
     params: list[Any] = []
     if sf_opportunity_id:
+        # Filters are composed from static SQL fragments and parameter values.
         filters.append("sf_opportunity_id = ?")
         params.append(sf_opportunity_id)
     if sf_account_id:
@@ -380,6 +422,7 @@ def record_agent_run(
     run_id = f"RUN-{uuid.uuid4().hex[:12].upper()}"
     created_at = _timestamp()
     sf_account_id = _sf_account_id_for_opportunity(sf_opportunity_id)
+    # Normalize UI/graph step dictionaries before inserting them as audit rows.
     normalized_steps = [
         {
             "step_id": str(step.get("id", f"step_{index + 1}")),
@@ -392,6 +435,7 @@ def record_agent_run(
     ]
 
     with connect() as connection:
+        # A run header records intent/status; child rows preserve step ordering.
         connection.execute(
             """
             INSERT INTO agent_runs (
@@ -442,6 +486,7 @@ def list_agent_runs(
     params: tuple[Any, ...] = ()
     where = ""
     if sf_opportunity_id:
+        # The frontend typically requests run history for the selected opportunity.
         where = "WHERE sf_opportunity_id = ?"
         params = (sf_opportunity_id,)
 
@@ -456,6 +501,8 @@ def list_agent_runs(
             ORDER BY r.created_at DESC
             LIMIT ?
             """,
+            # Clamp caller-provided limits so an API request cannot ask for an
+            # unbounded history scan.
             (*params, max(1, min(int(limit), 100))),
         ).fetchall()
 
@@ -486,6 +533,12 @@ def get_agent_run(run_id: str) -> dict[str, Any] | None:
     run = _row(run_row)
     run["steps"] = [_row(row) for row in step_rows]
     return run
+
+
+# ---------------------------------------------------------------------------
+# Row-shaping helpers.
+# These convert normalized SQL tables into nested API objects.
+# ---------------------------------------------------------------------------
 
 
 def record_activity(
@@ -523,6 +576,8 @@ def _opportunity_from_row(row: Any) -> dict[str, Any]:
     """Convert a joined opportunity row into the API response shape."""
     sf_opportunity_id = row["sf_opportunity_id"]
     with connect() as connection:
+        # Requirements are stored separately to keep one row per requirement and
+        # returned as a simple list for the frontend and recommendation logic.
         requirement_rows = connection.execute(
             """
             SELECT requirement
@@ -561,6 +616,8 @@ def _opportunity_from_row(row: Any) -> dict[str, Any]:
 
 def _quote_from_row(connection: Any, row: Any) -> dict[str, Any]:
     """Load a quote row together with its line items."""
+    # The caller supplies the active connection so quote loads can participate in
+    # larger transactions such as finalization.
     line_items = connection.execute(
         """
         SELECT sku, name, category, quantity, term_months, billing_model,
@@ -583,6 +640,8 @@ def _quote_from_mapping(row: Any, line_items: list[dict[str, Any]]) -> dict[str,
 
 def _order_from_row(connection: Any, row: Any) -> dict[str, Any]:
     """Load an order row together with its line items."""
+    # Orders copy quote line items at placement time, so the order detail view is
+    # stable even if later quote versions are created.
     line_items = connection.execute(
         """
         SELECT sku, name, category, quantity, term_months, billing_model,
@@ -612,6 +671,8 @@ def _next_oracle_quote_id(sf_opportunity_id: str) -> str:
 
     sequence = 1
     for row in rows:
+        # Existing quote ids end in a three-digit version. The next draft gets
+        # one greater than the highest existing version.
         match = re.search(r"-(\d{3})$", row["oracle_quote_id"])
         if match:
             sequence = max(sequence, int(match.group(1)) + 1)
@@ -622,8 +683,10 @@ def _next_oracle_quote_id(sf_opportunity_id: str) -> str:
 def _oracle_order_id_for_quote(oracle_quote_id: str) -> str:
     """Derive the Oracle order id that corresponds to a quote id."""
     if oracle_quote_id.startswith("ORA-Q-"):
+        # Current quote ids map directly from ORA-Q-* to ORA-O-*.
         return oracle_quote_id.replace("ORA-Q-", "ORA-O-", 1)
 
+    # Keep compatibility with earlier demo id formats used by tests or old data.
     legacy_match = re.fullmatch(r"ORA-QUOTE-SF-OPP-(\d+)-(\d+)", oracle_quote_id)
     if legacy_match:
         return f"ORA-O-{legacy_match.group(1)}-{legacy_match.group(2)}"
@@ -638,8 +701,10 @@ def _record_number(source_id: str) -> str:
     """Derive the stable numeric portion used in Oracle quote identifiers."""
     match = re.search(r"(\d+)$", source_id)
     if match:
+        # SF-OPP-12 becomes 012, producing stable demo ids.
         return f"{int(match.group(1)):03d}"
 
+    # Non-standard ids are compacted so generated CPQ ids are still readable.
     compacted = re.sub(r"[^A-Za-z0-9]+", "-", source_id).strip("-")
     return compacted[:12] or "000"
 
@@ -658,6 +723,8 @@ def _insert_activity(
     oracle_order_id: str | None = None,
 ) -> dict[str, Any]:
     """Insert one activity event using already-open repository transaction state."""
+    # If a caller only knows opportunity id, derive account id to support both
+    # account-level and opportunity-level timeline filtering.
     sf_account_id = sf_account_id or _sf_account_id_for_opportunity(
         sf_opportunity_id,
         connection=connection,
@@ -705,6 +772,8 @@ def _sf_account_id_for_opportunity(
     if not sf_opportunity_id:
         return None
 
+    # Helpers may run inside an existing transaction; only close the connection
+    # when this helper opened it.
     owns_connection = connection is None
     active_connection = connection or connect()
     try:

@@ -15,6 +15,12 @@ RetrieverFactory = Callable[[], Retriever]
 
 logger = logging.getLogger(__name__)
 
+# RAG tool flow:
+# - Agent calls MCP tool name `search_knowledge`.
+# - This module validates payload and calls Retriever.
+# - Retriever embeds the query and searches ChromaDB.
+# - The result is returned as a dictionary for MCP/agent consistency.
+
 
 def search_knowledge(
     query: str,
@@ -23,14 +29,18 @@ def search_knowledge(
 ) -> dict[str, Any]:
     """Retrieve knowledge snippets for a natural-language query."""
     if not query:
+        # Keep this validation here because it is the tool boundary for RAG search.
         raise ValueError("query is required.")
 
+    # Tests can inject a fake retriever; production/default code constructs one.
     active_retriever = retriever or Retriever()
     logger.info("Searching knowledge base: query_length=%s k=%s", len(query), k)
 
     try:
         results = active_retriever.retrieve(query, k=k)
     except Exception:
+        # Knowledge retrieval should not take down the sales workflow; an empty
+        # context result lets the agent continue with deterministic tool data.
         logger.exception("Knowledge search failed")
         results = []
 
@@ -50,6 +60,7 @@ def search_knowledge_tool(
     if not isinstance(query, str) or not query:
         raise ValueError("query is required.")
 
+    # `k` controls how many snippets return to the agent prompt.
     k = int(payload.get("k", 3))
     retriever = retriever_factory() if retriever_factory else None
     return search_knowledge(query=query, k=k, retriever=retriever)

@@ -54,6 +54,12 @@ The result is a transparent, governed middle layer that connects systems while k
 
 ![Enterprise AI Agent Platform architecture](docs/assets/architecture.png)
 
+Workflow diagrams:
+
+- [LangGraph workflow diagrams](docs/architecture/langgraph-workflow-diagram.md)
+- [Browser-rendered workflow diagram](docs/architecture/langgraph-workflow-diagram.html)
+- [OCI deployment architecture](docs/architecture/oci-deployment-architecture.md)
+
 Architecture rules enforced by the implementation:
 
 - LLM is used for reasoning through `LLMClient`.

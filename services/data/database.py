@@ -11,11 +11,17 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATABASE_PATH = PROJECT_ROOT / "app_data" / "business.sqlite3"
 
+# Data-layer flow:
+# - Repositories call initialize_database() before reads/writes.
+# - Initialization creates tables idempotently and seeds demo records only once.
+# - Runtime data lives in app_data/, which is intentionally ignored by git.
+
 
 def get_database_path() -> Path:
     """Resolve the SQLite database path from configuration or defaults."""
     configured_path = os.getenv("BUSINESS_DB_PATH")
     if configured_path:
+        # Tests and local experiments can point the database at a temporary file.
         return Path(configured_path)
 
     return DEFAULT_DATABASE_PATH
@@ -24,19 +30,25 @@ def get_database_path() -> Path:
 def connect() -> sqlite3.Connection:
     """Open a SQLite connection configured for row-style access."""
     database_path = get_database_path()
+    # Ensure a fresh clone can create app_data/business.sqlite3 on first use.
     database_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(database_path)
+    # sqlite3.Row lets repository functions address columns by name.
     connection.row_factory = sqlite3.Row
+    # Keep quote/order/detail rows consistent with their parent records.
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
 def initialize_database() -> None:
     """Create the database schema and seed records when needed."""
+    # Imported lazily to avoid seed -> catalog -> data import cycles at module load.
     from services.data.seed import seed_if_empty
 
     with connect() as connection:
         _create_schema(connection)
+        # seed_if_empty is safe to call on every route because it exits when
+        # accounts already exist.
         seed_if_empty(connection)
 
 
@@ -44,12 +56,16 @@ def reset_database() -> None:
     """Delete and rebuild the local SQLite business database."""
     database_path = get_database_path()
     if database_path.exists():
+        # Used by tests and manual resets to return the demo to seed state.
         database_path.unlink()
     initialize_database()
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:
     """Create all database tables required by the demo workflow."""
+    # The schema mirrors enterprise ownership:
+    # Salesforce-shaped records, CPQ-shaped records, agent audit records, and
+    # activity timeline records are separate tables.
     connection.executescript(
         """
         CREATE TABLE IF NOT EXISTS accounts (

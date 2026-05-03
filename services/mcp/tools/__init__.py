@@ -9,4 +9,5 @@ from services.mcp.tools.rag_tools import (
     search_knowledge_tool,
 )
 
+# Expose tool-registration helpers that add specialized tools to the MCP registry.
 __all__ = ["register_rag_tools", "search_knowledge", "search_knowledge_tool"]

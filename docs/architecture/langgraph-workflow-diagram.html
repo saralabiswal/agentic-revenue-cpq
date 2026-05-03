@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LangGraph Workflow Diagram</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f8fb;
+        --ink: #17202a;
+        --muted: #5d6a7a;
+        --line: #c8d3df;
+        --agent: #e8f4ff;
+        --agent-border: #3979b7;
+        --tool: #fff5df;
+        --tool-border: #aa7419;
+        --system: #eaf7f0;
+        --system-border: #2f855a;
+        --panel: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      main {
+        max-width: 1560px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+
+      .subtitle {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .panel {
+        margin-top: 16px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      svg {
+        display: block;
+        min-width: 1460px;
+        height: auto;
+      }
+
+      .node rect {
+        stroke-width: 2;
+        rx: 8;
+      }
+
+      .agent rect {
+        fill: var(--agent);
+        stroke: var(--agent-border);
+      }
+
+      .tool rect {
+        fill: var(--tool);
+        stroke: var(--tool-border);
+      }
+
+      .system rect {
+        fill: var(--system);
+        stroke: var(--system-border);
+      }
+
+      .terminal rect {
+        fill: #eef1f5;
+        stroke: #7b8794;
+      }
+
+      text {
+        fill: var(--ink);
+        font-size: 14px;
+      }
+
+      .small {
+        fill: var(--muted);
+        font-size: 12px;
+      }
+
+      .arrow {
+        fill: none;
+        stroke: #435061;
+        stroke-width: 2;
+        marker-end: url(#arrowhead);
+      }
+
+      .tool-line {
+        fill: none;
+        stroke: #9a6a18;
+        stroke-width: 2;
+        stroke-dasharray: 6 5;
+        marker-end: url(#toolArrow);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .swatch {
+        width: 14px;
+        height: 14px;
+        border: 2px solid;
+        border-radius: 4px;
+      }
+
+      .swatch.agent {
+        background: var(--agent);
+        border-color: var(--agent-border);
+      }
+
+      .swatch.tool {
+        background: var(--tool);
+        border-color: var(--tool-border);
+      }
+
+      .swatch.system {
+        background: var(--system);
+        border-color: var(--system-border);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>LangGraph Workflow Diagram</h1>
+      <p class="subtitle">
+        Architecture reference for the Enterprise AI Agent Platform. This file
+        uses plain SVG, so it should render directly in a browser.
+      </p>
+
+      <h2>Full Chat-To-Quote Graph</h2>
+      <section class="panel" aria-label="Full chat-to-quote graph">
+        <svg viewBox="0 0 1500 470" role="img" aria-labelledby="full-title">
+          <title id="full-title">Full LangGraph chat-to-quote workflow</title>
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" fill="#435061" />
+            </marker>
+            <marker
+              id="toolArrow"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" fill="#9a6a18" />
+            </marker>
+          </defs>
+
+          <g class="node terminal">
+            <rect x="20" y="90" width="110" height="60" />
+            <text x="75" y="116" text-anchor="middle">START</text>
+            <text x="75" y="136" text-anchor="middle" class="small">LangGraph</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="170" y="90" width="130" height="60" />
+            <text x="235" y="114" text-anchor="middle">analyze</text>
+            <text x="235" y="135" text-anchor="middle" class="small">_analyze_intent</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="340" y="90" width="160" height="60" />
+            <text x="420" y="114" text-anchor="middle">retrieve_context</text>
+            <text x="420" y="135" text-anchor="middle" class="small">_retrieve_context</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="540" y="90" width="155" height="60" />
+            <text x="617" y="114" text-anchor="middle">get_opportunity</text>
+            <text x="617" y="135" text-anchor="middle" class="small">_get_opportunity</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="735" y="90" width="170" height="60" />
+            <text x="820" y="114" text-anchor="middle">recommend_products</text>
+            <text x="820" y="135" text-anchor="middle" class="small">_recommend_products</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="945" y="90" width="125" height="60" />
+            <text x="1007" y="114" text-anchor="middle">get_pricing</text>
+            <text x="1007" y="135" text-anchor="middle" class="small">_get_pricing</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="1110" y="90" width="130" height="60" />
+            <text x="1175" y="114" text-anchor="middle">create_quote</text>
+            <text x="1175" y="135" text-anchor="middle" class="small">_create_quote</text>
+          </g>
+
+          <g class="node agent">
+            <rect x="1280" y="90" width="105" height="60" />
+            <text x="1332" y="114" text-anchor="middle">respond</text>
+            <text x="1332" y="135" text-anchor="middle" class="small">_respond</text>
+          </g>
+
+          <g class="node terminal">
+            <rect x="1425" y="90" width="65" height="60" />
+            <text x="1457" y="116" text-anchor="middle">END</text>
+            <text x="1457" y="136" text-anchor="middle" class="small">done</text>
+          </g>
+
+          <path class="arrow" d="M130 120 L170 120" />
+          <path class="arrow" d="M300 120 L340 120" />
+          <path class="arrow" d="M500 120 L540 120" />
+          <path class="arrow" d="M695 120 L735 120" />
+          <path class="arrow" d="M905 120 L945 120" />
+          <path class="arrow" d="M1070 120 L1110 120" />
+          <path class="arrow" d="M1240 120 L1280 120" />
+          <path class="arrow" d="M1385 120 L1425 120" />
+
+          <g class="node tool">
+            <rect x="345" y="275" width="150" height="58" />
+            <text x="420" y="299" text-anchor="middle">search_knowledge</text>
+            <text x="420" y="319" text-anchor="middle" class="small">RAG tool</text>
+          </g>
+          <g class="node tool">
+            <rect x="545" y="275" width="145" height="58" />
+            <text x="617" y="299" text-anchor="middle">get_opportunity</text>
+            <text x="617" y="319" text-anchor="middle" class="small">Salesforce tool</text>
+          </g>
+          <g class="node tool">
+            <rect x="740" y="275" width="160" height="58" />
+            <text x="820" y="299" text-anchor="middle">recommend_products</text>
+            <text x="820" y="319" text-anchor="middle" class="small">CPQ tool</text>
+          </g>
+          <g class="node tool">
+            <rect x="947" y="275" width="120" height="58" />
+            <text x="1007" y="299" text-anchor="middle">get_pricing</text>
+            <text x="1007" y="319" text-anchor="middle" class="small">CPQ tool</text>
+          </g>
+          <g class="node tool">
+            <rect x="1125" y="275" width="100" height="58" />
+            <text x="1175" y="299" text-anchor="middle">create_quote</text>
+            <text x="1175" y="319" text-anchor="middle" class="small">CPQ tool</text>
+          </g>
+
+          <path class="tool-line" d="M420 150 L420 275" />
+          <path class="tool-line" d="M617 150 L617 275" />
+          <path class="tool-line" d="M820 150 L820 275" />
+          <path class="tool-line" d="M1007 150 L1007 275" />
+          <path class="tool-line" d="M1175 150 L1175 275" />
+        </svg>
+        <div class="legend">
+          <span><span class="swatch agent"></span>LangGraph node</span>
+          <span><span class="swatch tool"></span>MCP tool call</span>
+          <span><span class="swatch system"></span>External/mock system in layer view</span>
+        </div>
+      </section>
+
+      <h2>Other Graphs</h2>
+      <section class="panel" aria-label="Other graph variants">
+        <svg viewBox="0 0 1160 440" role="img" aria-labelledby="variant-title">
+          <title id="variant-title">Recommendation, pricing, and quote graph variants</title>
+
+          <text x="20" y="30" font-weight="700">Recommendation-only graph</text>
+          <g class="node agent"><rect x="20" y="50" width="120" height="52" /><text x="80" y="82" text-anchor="middle">analyze</text></g>
+          <g class="node agent"><rect x="165" y="50" width="140" height="52" /><text x="235" y="82" text-anchor="middle">retrieve_context</text></g>
+          <g class="node agent"><rect x="330" y="50" width="145" height="52" /><text x="402" y="82" text-anchor="middle">get_opportunity</text></g>
+          <g class="node agent"><rect x="500" y="50" width="160" height="52" /><text x="580" y="82" text-anchor="middle">recommend_products</text></g>
+          <g class="node agent"><rect x="685" y="50" width="120" height="52" /><text x="745" y="82" text-anchor="middle">get_pricing</text></g>
+          <g class="node agent"><rect x="830" y="50" width="170" height="52" /><text x="915" y="82" text-anchor="middle">respond_review</text></g>
+          <path class="arrow" d="M140 76 L165 76" /><path class="arrow" d="M305 76 L330 76" /><path class="arrow" d="M475 76 L500 76" /><path class="arrow" d="M660 76 L685 76" /><path class="arrow" d="M805 76 L830 76" />
+
+          <text x="20" y="175" font-weight="700">Pricing-only graph</text>
+          <g class="node agent"><rect x="20" y="195" width="170" height="52" /><text x="105" y="227" text-anchor="middle">prepare_selection</text></g>
+          <g class="node agent"><rect x="220" y="195" width="120" height="52" /><text x="280" y="227" text-anchor="middle">get_pricing</text></g>
+          <g class="node agent"><rect x="370" y="195" width="150" height="52" /><text x="445" y="227" text-anchor="middle">respond_pricing</text></g>
+          <path class="arrow" d="M190 221 L220 221" /><path class="arrow" d="M340 221 L370 221" />
+
+          <text x="20" y="320" font-weight="700">Quote-creation graph</text>
+          <g class="node agent"><rect x="20" y="340" width="170" height="52" /><text x="105" y="372" text-anchor="middle">prepare_selection</text></g>
+          <g class="node agent"><rect x="220" y="340" width="120" height="52" /><text x="280" y="372" text-anchor="middle">get_pricing</text></g>
+          <g class="node agent"><rect x="370" y="340" width="130" height="52" /><text x="435" y="372" text-anchor="middle">create_quote</text></g>
+          <g class="node agent"><rect x="530" y="340" width="180" height="52" /><text x="620" y="372" text-anchor="middle">respond_quote</text></g>
+          <path class="arrow" d="M190 366 L220 366" /><path class="arrow" d="M340 366 L370 366" /><path class="arrow" d="M500 366 L530 366" />
+        </svg>
+      </section>
+
+      <h2>Layer View</h2>
+      <section class="panel" aria-label="Layer view">
+        <svg viewBox="0 0 1120 300" role="img" aria-labelledby="layer-title">
+          <title id="layer-title">Application layers from UI to tools and data stores</title>
+
+          <g class="node system"><rect x="20" y="105" width="120" height="60" /><text x="80" y="130" text-anchor="middle">Next.js UI</text><text x="80" y="150" text-anchor="middle" class="small">sales workbench</text></g>
+          <g class="node system"><rect x="170" y="105" width="130" height="60" /><text x="235" y="130" text-anchor="middle">FastAPI</text><text x="235" y="150" text-anchor="middle" class="small">backend routes</text></g>
+          <g class="node agent"><rect x="330" y="105" width="145" height="60" /><text x="402" y="130" text-anchor="middle">LangGraph</text><text x="402" y="150" text-anchor="middle" class="small">workflow</text></g>
+          <g class="node tool"><rect x="505" y="105" width="155" height="60" /><text x="582" y="130" text-anchor="middle">MCP Engine</text><text x="582" y="150" text-anchor="middle" class="small">tool boundary</text></g>
+          <g class="node tool"><rect x="690" y="105" width="145" height="60" /><text x="762" y="130" text-anchor="middle">Tool Handlers</text><text x="762" y="150" text-anchor="middle" class="small">adapters</text></g>
+
+          <g class="node system"><rect x="880" y="25" width="180" height="48" /><text x="970" y="55" text-anchor="middle">Salesforce Mock</text></g>
+          <g class="node system"><rect x="880" y="95" width="180" height="48" /><text x="970" y="125" text-anchor="middle">Oracle CPQ Mock</text></g>
+          <g class="node system"><rect x="880" y="165" width="180" height="48" /><text x="970" y="195" text-anchor="middle">RAG Retriever</text></g>
+          <g class="node system"><rect x="880" y="235" width="180" height="48" /><text x="970" y="265" text-anchor="middle">SQLite Data</text></g>
+
+          <path class="arrow" d="M140 135 L170 135" />
+          <path class="arrow" d="M300 135 L330 135" />
+          <path class="arrow" d="M475 135 L505 135" />
+          <path class="arrow" d="M660 135 L690 135" />
+          <path class="arrow" d="M835 135 C855 135, 855 49, 880 49" />
+          <path class="arrow" d="M835 135 L880 119" />
+          <path class="arrow" d="M835 135 C855 135, 855 189, 880 189" />
+          <path class="arrow" d="M835 135 C855 135, 855 259, 880 259" />
+        </svg>
+      </section>
+    </main>
+  </body>
+</html>

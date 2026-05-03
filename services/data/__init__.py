@@ -21,6 +21,8 @@ from services.data.repositories import (
     reset_business_data,
 )
 
+# Re-export repository functions as the public data-service API. Integrations and
+# backend routes should import from here instead of reaching into database internals.
 __all__ = [
     "create_quote_record",
     "finalize_quote_record",

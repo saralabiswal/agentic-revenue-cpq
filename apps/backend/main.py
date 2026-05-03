@@ -43,9 +43,18 @@ from services.llm import create_llm_client
 from services.mcp.factory import create_default_mcp_engine
 
 
+# Backend request flow:
+# 1. The Next.js frontend calls these FastAPI routes.
+# 2. Simple read routes execute named MCP tools directly.
+# 3. Agentic routes build graph state and invoke a LangGraph workflow.
+# 4. LangGraph nodes call MCP tools for Salesforce, CPQ, RAG, and data actions.
+# 5. The backend records audit/activity details and returns typed API responses.
 configure_logging()
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Enterprise AI Agent Platform")
+
+# Allow the local Next.js app to call the API during development. Production
+# deployments can replace this with FRONTEND_ORIGINS.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -62,6 +71,13 @@ app.add_middleware(
 )
 
 
+# ---------------------------------------------------------------------------
+# Health and Salesforce-style read APIs.
+# These routes are thin API adapters. They do not know how Salesforce works;
+# they call MCP tools, and the tool layer routes to the mock CRM/data layer.
+# ---------------------------------------------------------------------------
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Return a lightweight backend health response."""
@@ -73,6 +89,7 @@ def health() -> dict[str, str]:
 def list_account_records() -> AccountListResponse:
     """Return account records for the frontend account selector."""
     logger.info("Account list requested")
+    # Backend -> MCP tool -> Salesforce mock/data repository.
     result = _execute_mcp_tool("list_accounts", {})
     return AccountListResponse(accounts=result["accounts"])
 
@@ -82,6 +99,7 @@ def list_opportunity_records(sf_account_id: str | None = None) -> OpportunityLis
     """Return opportunities, optionally scoped to one account."""
     logger.info("Opportunity list requested: sf_account_id=%s", sf_account_id)
     payload = {"sf_account_id": sf_account_id} if sf_account_id else {}
+    # Optional account filtering is passed through as MCP payload data.
     result = _execute_mcp_tool("list_opportunities", payload)
     return OpportunityListResponse(opportunities=result["opportunities"])
 
@@ -93,6 +111,7 @@ def list_opportunity_records(sf_account_id: str | None = None) -> OpportunityLis
 def list_account_opportunity_records(sf_account_id: str) -> OpportunityListResponse:
     """Return opportunities for one account and record the portfolio view."""
     logger.info("Account opportunity list requested: sf_account_id=%s", sf_account_id)
+    # Activity records power the timeline shown in the frontend.
     record_activity(
         sf_account_id=sf_account_id,
         system="Salesforce CRM Cloud",
@@ -108,6 +127,7 @@ def list_account_opportunity_records(sf_account_id: str) -> OpportunityListRespo
 def get_opportunity_record(sf_opportunity_id: str) -> dict:
     """Return one opportunity and record that it was viewed."""
     logger.info("Opportunity detail requested: sf_opportunity_id=%s", sf_opportunity_id)
+    # The backend fetches the CRM object first, then records the view event.
     opportunity = _execute_mcp_tool(
         "get_opportunity",
         {"sf_opportunity_id": sf_opportunity_id},
@@ -120,6 +140,13 @@ def get_opportunity_record(sf_opportunity_id: str) -> dict:
         detail=f"Salesforce opportunity {sf_opportunity_id} details loaded.",
     )
     return opportunity
+
+
+# ---------------------------------------------------------------------------
+# Opportunity detail side panels.
+# Quote history and activity are read through MCP so the frontend can reload
+# current state after pricing, quote creation, or order placement.
+# ---------------------------------------------------------------------------
 
 
 @app.get(
@@ -153,6 +180,13 @@ def list_activity_records(sf_opportunity_id: str) -> ActivityListResponse:
     )
 
 
+# ---------------------------------------------------------------------------
+# Agentic opportunity-to-quote APIs.
+# These routes build the initial graph state. The graph then owns the ordered
+# workflow: analyze input, retrieve context, call tools, and build responses.
+# ---------------------------------------------------------------------------
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
     """Run the full chat-driven opportunity-to-quote workflow."""
@@ -170,9 +204,11 @@ def chat(request: ChatRequest) -> ChatResponse:
         ]
     }
     if request.sf_opportunity_id:
+        # Supplying this id anchors the agent workflow to a selected opportunity.
         state["sf_opportunity_id"] = request.sf_opportunity_id
 
     try:
+        # Full graph: opportunity -> recommendation -> pricing -> quote -> response.
         result = build_agent_graph(llm_client=create_llm_client()).invoke(state)
     except Exception as exc:
         logger.exception(
@@ -216,6 +252,7 @@ def recommend_quote(request: RecommendationRequest) -> RecommendationResponse:
     }
 
     try:
+        # Recommendation graph stops before quote creation so the user can review products.
         result = build_recommendation_graph(llm_client=create_llm_client()).invoke(state)
     except Exception as exc:
         logger.exception(
@@ -225,6 +262,8 @@ def recommend_quote(request: RecommendationRequest) -> RecommendationResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     response = result["response"]
+    # Agent runs are stored separately from business activity so the UI can show
+    # explainability and execution history for agent decisions.
     record_agent_run(
         sf_opportunity_id=request.sf_opportunity_id,
         intent="recommendation",
@@ -251,10 +290,13 @@ def price_quote(request: PricingRequest) -> PricingResponse:
     state = {
         "sf_opportunity_id": request.sf_opportunity_id,
         "currency": request.currency,
+        # Pydantic models are converted into plain dictionaries because graph
+        # nodes and MCP tools pass JSON-like state between layers.
         "selected_products": [product.model_dump() for product in request.products],
     }
 
     try:
+        # Pricing graph reuses the same CPQ pricing tool without recommendation.
         result = build_pricing_graph().invoke(state)
     except Exception as exc:
         logger.exception(
@@ -264,6 +306,8 @@ def price_quote(request: PricingRequest) -> PricingResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     response = result["response"]
+    # Record both business activity and agent run history: activity explains the
+    # deal timeline, while run history explains agent/tool execution.
     record_activity(
         sf_opportunity_id=request.sf_opportunity_id,
         system="Oracle CPQ Cloud",
@@ -300,10 +344,13 @@ def create_quote_from_selection(request: QuoteCreateRequest) -> QuoteCreateRespo
         "sf_opportunity_id": request.sf_opportunity_id,
         "currency": request.currency,
         "selected_products": [product.model_dump() for product in request.products],
+        # This flag tells the quote graph to persist the CPQ quote in SQLite
+        # instead of returning only a transient draft response.
         "persist_quote": True,
     }
 
     try:
+        # Quote creation graph: selected products -> pricing -> create quote -> response.
         result = build_quote_creation_graph(llm_client=create_llm_client()).invoke(state)
     except Exception as exc:
         logger.exception(
@@ -326,6 +373,13 @@ def create_quote_from_selection(request: QuoteCreateRequest) -> QuoteCreateRespo
         response["pricing"]["total"],
     )
     return QuoteCreateResponse(**response)
+
+
+# ---------------------------------------------------------------------------
+# Quote finalization and order APIs.
+# Finalization is not an LLM task: the backend asks MCP to run the CPQ lifecycle
+# tool, which accepts the quote, supersedes older drafts, and creates an order.
+# ---------------------------------------------------------------------------
 
 
 @app.post("/quote/finalize", response_model=QuoteFinalizeResponse)
@@ -363,6 +417,13 @@ def get_order_record(oracle_order_id: str) -> dict:
     return order
 
 
+# ---------------------------------------------------------------------------
+# Agent audit APIs.
+# These routes expose stored agent run history so the frontend can show what the
+# agent did after recommendation, pricing, and quote-creation actions.
+# ---------------------------------------------------------------------------
+
+
 @app.get("/agent-runs")
 def list_agent_run_records(
     sf_opportunity_id: str | None = None,
@@ -395,8 +456,12 @@ def get_agent_run_record(run_id: str) -> dict:
 
 def _execute_mcp_tool(tool_name: str, payload: dict) -> dict:
     """Execute one MCP tool and translate failures into HTTP errors."""
+    # Create a fresh default engine per route call. The factory wires the MCP
+    # registry with Salesforce, CPQ, activity, quote, order, and RAG tools.
     engine = create_default_mcp_engine()
     try:
+        # MCP failures become HTTP 400 responses so frontend callers receive a
+        # clear API error instead of a raw Python exception.
         return engine.execute(tool_name, payload)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

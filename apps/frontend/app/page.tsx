@@ -179,12 +179,26 @@ type CommandIntent = "recommend" | "create_quote" | "create_order" | null;
 
 type CommandSource = "auto" | "manual";
 
+type ViewMode = "business" | "architecture" | "developer";
+
 type SuggestedCommand = {
   text: string;
   intent: CommandIntent;
 };
 
 type AgentActionKind = "recommend" | "quote" | "order";
+
+type ArchitectureActionKind = AgentActionKind | "ready";
+
+type DeveloperFlowKey =
+  | "recommend"
+  | "rag"
+  | "backend"
+  | "langgraph"
+  | "mcp"
+  | "integrations"
+  | "data"
+  | "llm";
 
 type AgentActionState = {
   kind: AgentActionKind;
@@ -223,6 +237,32 @@ type AgentWorkbenchModel = {
 const defaultCommand =
   "Recommend NetApp-aligned products for this telecom opportunity, prepare pricing, and explain the quote path.";
 
+const COMMAND_OPTIONS: {
+  intent: Exclude<CommandIntent, null>;
+  text: string;
+  label: string;
+  description: string;
+}[] = [
+  {
+    intent: "recommend",
+    text: "Recommend Product",
+    label: "Recommend Product",
+    description: "Find products and pricing for the selected opportunity.",
+  },
+  {
+    intent: "create_quote",
+    text: "Create quote",
+    label: "Create Quote",
+    description: "Create an Oracle CPQ quote from selected products.",
+  },
+  {
+    intent: "create_order",
+    text: "Create order",
+    label: "Create Order",
+    description: "Finalize the accepted quote into an order.",
+  },
+];
+
 /** Render the command center and coordinate account, opportunity, recommendation, quote, and order state. */
 export default function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -244,7 +284,8 @@ export default function Home() {
   const [latestQuote, setLatestQuote] = useState<QuoteRecord | null>(null);
   const [order, setOrder] = useState<OrderRecord | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
-  const [viewMode, setViewMode] = useState<"business" | "architecture">("business");
+  const [viewMode, setViewMode] = useState<ViewMode>("business");
+  const [developerFlow, setDeveloperFlow] = useState<DeveloperFlowKey>("data");
   const [status, setStatus] = useState<
     "idle" | "loading" | "running" | "pricing" | "quoting" | "finalizing"
   >("idle");
@@ -324,6 +365,12 @@ export default function Home() {
       selectedProducts,
     ],
   );
+  const architectureAction = resolveActiveAgentAction({
+    action: agentAction,
+    latestQuote,
+    order,
+    products,
+  });
 
   const headline = order
     ? "Order placed"
@@ -433,8 +480,7 @@ export default function Home() {
     setCommandSource("auto");
   }
 
-  async function executeCommand(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function runCommand() {
     if (effectiveCommandIntent === "recommend") {
       const completed = await runRecommendation();
       if (completed) {
@@ -467,8 +513,13 @@ export default function Home() {
     }
 
     setCommandNotice(
-      'Try "Recommend Product", "Create quote", or "Create order". The manual buttons still work too.',
+      "Choose Recommend Product, Create Quote, or Create Order before running the command.",
     );
+  }
+
+  async function executeCommand(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await runCommand();
   }
 
   async function runRecommendation(): Promise<boolean> {
@@ -621,31 +672,41 @@ export default function Home() {
       <main className="main live-main">
         <header className="topbar">
           <div className="topbar-content">
-            <p className="eyebrow">Enterprise AI Agent Platform</p>
-            <h1>Deal Orchestration Command Center</h1>
-            <p className="author-line">Author: Sarala Biswal</p>
+            <div className="topbar-meta">
+              <p className="eyebrow">Enterprise AI Agent Platform</p>
+              <span>Author: Sarala Biswal</span>
+            </div>
+            <h1>Enterprise AI Agentic Workflow</h1>
             <p className="product-punchline">
-              Governed agentic orchestration for enterprise revenue workflows: reason with
-              LLMs, ground decisions with RAG, execute through MCP tools, and move cleanly
-              from Salesforce opportunity to Oracle CPQ quote and order.
+              Revenue-flow platform showing how an AI agent reads Salesforce, orchestrates decisions,
+              and writes governed quote/order outcomes to Oracle CPQ.
             </p>
             <div className="capability-strip" aria-label="Platform capabilities">
-              <span>LangGraph orchestration</span>
-              <span>MCP execution boundary</span>
-              <span>RAG-grounded decisions</span>
-              <span>LLMClient reasoning</span>
-              <span>CRM to CPQ governance</span>
+              <span>LangGraph</span>
+              <span>MCP tools</span>
+              <span>RAG evidence</span>
+              <span>LLMClient</span>
+              <span>CRM to CPQ</span>
             </div>
           </div>
           <div className="topbar-insight" aria-label="Architecture at a glance">
             <div className="topbar-insight-head">
-              <span className={`status-pill ${error ? "status-error" : ""}`}>{headline}</span>
               <strong>Agentic Revenue Flow</strong>
+              <span className={`status-pill ${error ? "status-error" : ""}`}>{headline}</span>
             </div>
             <div className="flow-ribbon" aria-label="System flow">
-              <span>Salesforce</span>
-              <b>Agent + MCP</b>
-              <span>Oracle CPQ</span>
+              <span>
+                <em>Read</em>
+                Salesforce
+              </span>
+              <b>
+                <em>Orchestrate</em>
+                Agent + MCP
+              </b>
+              <span>
+                <em>Write</em>
+                Oracle CPQ
+              </span>
             </div>
             <div className="topbar-metrics">
               <div>
@@ -672,39 +733,6 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="system-map-app" aria-label="System ownership map">
-          <SystemCard
-            accent="sf"
-            code="SF"
-            title="Salesforce CRM Cloud"
-            detail="Accounts, opportunities, stage, pipeline, and customer context"
-          />
-          <div className="system-link">read</div>
-          <SystemCard
-            accent="agent"
-            code="AI"
-            title="Agentic Orchestration App"
-            detail="LangGraph agent, MCP execution, RAG evidence, LLMClient response"
-          />
-          <div className="system-link">write</div>
-          <SystemCard
-            accent="cpq"
-            code="CPQ"
-            title="Oracle CPQ Cloud"
-            detail="Product rules, pricing, quote versions, accepted quote, and order"
-          />
-        </section>
-
-        <SelectedContextBand
-          account={selectedAccount}
-          order={order}
-          opportunity={opportunity}
-          opportunityCount={opportunities.length}
-          pricing={pricing}
-          quoteCount={quotes.length}
-          selectedProductCount={selectedProducts.length}
-        />
-
         {error ? <div className="error-banner">{error}</div> : null}
 
         <div className="view-switch" aria-label="Workspace view">
@@ -724,244 +752,278 @@ export default function Home() {
           >
             Architecture View
           </button>
+          <button
+            aria-pressed={viewMode === "developer"}
+            className={viewMode === "developer" ? "active" : ""}
+            onClick={() => setViewMode("developer")}
+            type="button"
+          >
+            Developer View
+          </button>
         </div>
 
         {viewMode === "business" ? (
-          <section className="three-lane-workspace">
-            <aside className="cloud-lane">
-              <LaneHeader
-                badge="Read"
-                badgeClass="sf"
-                kicker="Source System"
-                title="Salesforce CRM Cloud"
-              />
-              <section className="lane-section">
-                <h2>Accounts</h2>
-                <div className="record-stack">
-                  {accounts.map((account) => {
-                    const isSelected = account.sf_account_id === selectedSfAccountId;
-                    const isExpanded = account.sf_account_id === expandedSfAccountId;
-                    return (
-                      <article
-                        className={`account-record ${isSelected ? "active" : ""}`}
-                        key={account.sf_account_id}
-                      >
-                        <button
-                          className={`record-button account-button ${isSelected ? "active" : ""}`}
-                          disabled={isBusy}
-                          onClick={() => void toggleAccount(account.sf_account_id)}
-                          type="button"
-                        >
-                          <span className="collapse-mark">{isExpanded ? "Collapse" : "Expand"}</span>
-                          <strong>{account.name}</strong>
-                          <span>{displayRecordId(account.sf_account_id)}</span>
-                          <small>
-                            {account.segment} - {account.opportunity_count} opportunities -{" "}
-                            {formatCurrency(account.open_pipeline, "USD")}
-                          </small>
-                        </button>
-
-                        {isExpanded ? (
-                          <div className="nested-opportunities">
-                            {opportunities.map((item) => (
-                              <button
-                                className={`opportunity-button ${
-                                  item.sf_opportunity_id === selectedSfOpportunityId ? "active" : ""
-                                }`}
-                                disabled={isBusy}
-                                key={item.sf_opportunity_id}
-                                onClick={() => void selectOpportunity(item.sf_opportunity_id)}
-                                type="button"
-                              >
-                                <strong>{item.name}</strong>
-                                <span>{displayRecordId(item.sf_opportunity_id)}</span>
-                                <small>
-                                  {item.stage} - {item.term_months} months -{" "}
-                                  {formatCurrency(item.amount, item.currency)}
-                                </small>
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                      </article>
-                    );
-                  })}
+          <section className="business-workspace">
+            <section className="business-source-layer">
+              <div className="source-command-row">
+                <div className="source-command-title">
+                  <p className="eyebrow">Source System</p>
+                  <h2>Salesforce CRM Cloud</h2>
+                  <span className="source-badge sf">Read</span>
                 </div>
-              </section>
-
-            </aside>
-
-            <section className="cloud-lane agent-lane">
-              <LaneHeader
-                badge="Decide + Orchestrate"
-                badgeClass="agent"
-                kicker="Middle Layer"
-                title="Agentic Orchestration App"
-              />
-              <form className="command-panel" onSubmit={executeCommand}>
-                <label className="command-field">
-                  <span>Command Assistant</span>
-                  <textarea
-                    disabled={isBusy}
-                    onChange={(event) => {
-                      setCommandSource("manual");
-                      setCommand(event.target.value);
-                    }}
-                    rows={2}
-                    value={command}
-                  />
-                </label>
-                <div className="command-examples" aria-label="Command examples">
-                  {["Recommend Product", "Create quote", "Create order"].map((example) => (
-                    <button
-                      className={command === example ? "active" : ""}
+                <div className="source-select-row" aria-label="Salesforce source selectors">
+                  <label>
+                    <span>Account</span>
+                    <select
                       disabled={isBusy}
-                      key={example}
-                      onClick={() => {
-                        setCommandSource("manual");
-                        setCommand(example);
-                      }}
-                      type="button"
+                      onChange={(event) => void selectAccount(event.target.value)}
+                      value={selectedSfAccountId}
                     >
-                      {example}
-                    </button>
-                  ))}
+                      {accounts.map((account) => (
+                        <option key={account.sf_account_id} value={account.sf_account_id}>
+                          {displayRecordId(account.sf_account_id)} - {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Opportunity</span>
+                    <select
+                      disabled={isBusy || opportunities.length === 0}
+                      onChange={(event) => void selectOpportunity(event.target.value)}
+                      value={selectedSfOpportunityId}
+                    >
+                      {opportunities.map((item) => (
+                        <option key={item.sf_opportunity_id} value={item.sf_opportunity_id}>
+                          {displayRecordId(item.sf_opportunity_id)} - {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-                <div className="command-action-row">
-                  <div className="assistant-guidance">
-                    <span>Next best action</span>
-                    <strong>{nextBestAction}</strong>
-                    {commandNotice ? <p>{commandNotice}</p> : null}
-                  </div>
-                  <button
-                    className="command-primary"
-                    disabled={isBusy || !selectedSfOpportunityId || !effectiveCommandIntent}
-                    type="submit"
-                  >
-                    {commandButtonLabel(status, effectiveCommandIntent)}
-                  </button>
-                </div>
-              </form>
-
-              <AgentWorkbench
-                action={agentAction}
-                activity={activity}
-                finalizableQuote={finalizableQuote}
-                latestQuote={latestQuote}
+              </div>
+              <SelectedContextBand
+                account={selectedAccount}
                 order={order}
                 opportunity={opportunity}
+                opportunityCount={opportunities.length}
                 pricing={pricing}
-                products={products}
-                quotes={quotes}
-                retrievedContext={retrievedContext}
-                runSteps={runSteps}
-                selectedProducts={selectedProducts}
+                quoteCount={quotes.length}
+                selectedProductCount={selectedProducts.length}
               />
-
-              {order ? (
-                <OrderDocument order={order} />
-              ) : latestQuote && agentAction?.kind === "quote" ? (
-                <QuoteDocument
-                  isBusy={isBusy}
-                  onFinalize={() => void finalizeQuote(latestQuote.oracle_quote_id)}
-                  quote={latestQuote}
-                  status={status}
-                />
-              ) : (
-                <RecommendedProductsPanel
-                  isBusy={isBusy}
-                  lineItemBySku={lineItemBySku}
-                  onCreateQuote={createQuote}
-                  onPatchProduct={patchProduct}
-                  pricing={pricing}
-                  products={products}
-                  selectedProducts={selectedProducts}
-                  status={status}
-                />
-              )}
-
-              {pricing ? (
-                <section className="price-band-live" aria-label="Pricing summary">
-                  <SummaryItem label="Subtotal" value={formatCurrency(pricing.subtotal, pricing.currency)} />
-                  <SummaryItem label="Discount" value={formatCurrency(pricing.discount, pricing.currency)} />
-                  <SummaryItem label="Total" value={formatCurrency(pricing.total, pricing.currency)} />
-                </section>
-              ) : null}
             </section>
 
-            <aside className="cloud-lane">
-              <LaneHeader
-                badge="Write"
-                badgeClass="cpq"
-                kicker="Target System"
-                title="Oracle CPQ Cloud"
-              />
-              <section className="lane-section">
-                <h2>Quote Versions</h2>
-                {quotes.length === 0 ? (
-                  <div className="empty-state">
-                    No quote versions exist for this opportunity yet.
+            <section className="business-execution-grid">
+              <section className="cloud-lane agent-lane">
+                <LaneHeader
+                  badge="Decide + Orchestrate"
+                  badgeClass="agent"
+                  kicker="Middle Layer"
+                  title="Agentic Orchestration App"
+                />
+                <form className="command-panel" onSubmit={executeCommand}>
+                  <div className="command-panel-head">
+                    <div>
+                      <span>Command Assistant</span>
+                      <strong>Choose one command, then run it for the selected opportunity.</strong>
+                    </div>
+                    <em>{effectiveCommandIntent ? "Command ready" : "Waiting for command"}</em>
                   </div>
-                ) : (
-                  <div className="quote-stack">
-                    {quotes.map((quote) => (
-                      <article className={`quote-card ${quote.status.toLowerCase()}`} key={quote.oracle_quote_id}>
-                        <div>
-                          <strong>{displayRecordId(quote.oracle_quote_id)}</strong>
-                          <span>{quote.status}</span>
-                        </div>
-                        <p>
-                          {quote.selected_product_count} products -{" "}
-                          {formatCurrency(quote.total, quote.currency)}
-                        </p>
-                        <button
-                          disabled={
-                            isBusy ||
-                            quote.status === "SUPERSEDED" ||
-                            quote.status === "ACCEPTED"
+                  <div className="command-composer">
+                    <label className="command-select-field">
+                      <span>Command to run</span>
+                      <select
+                        disabled={isBusy}
+                        onChange={(event) => {
+                          const selected = COMMAND_OPTIONS.find((option) => option.intent === event.target.value);
+                          if (selected) {
+                            setCommandSource("manual");
+                            setCommand(selected.text);
                           }
-                          onClick={() => void finalizeQuote(quote.oracle_quote_id)}
-                          type="button"
-                        >
-                          {status === "finalizing" ? "Placing..." : "Finalize / Place Order"}
-                        </button>
-                      </article>
-                    ))}
+                        }}
+                        value={effectiveCommandIntent ?? ""}
+                      >
+                        <option value="">Choose a command</option>
+                        {COMMAND_OPTIONS.map((option) => (
+                          <option key={option.intent} value={option.intent}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="command-field">
+                      <span>Command details</span>
+                      <textarea
+                        disabled={isBusy}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter" || event.shiftKey) {
+                            return;
+                          }
+
+                          event.preventDefault();
+                          event.currentTarget.form?.requestSubmit();
+                        }}
+                        onChange={(event) => {
+                          setCommandSource("manual");
+                          setCommand(event.target.value);
+                        }}
+                        rows={2}
+                        value={command}
+                      />
+                    </label>
                   </div>
+                  <div className="command-action-row">
+                    <div className="assistant-guidance">
+                      <span>Next best action</span>
+                      <strong>{nextBestAction}</strong>
+                      {commandNotice ? <p>{commandNotice}</p> : null}
+                    </div>
+                    <button
+                      className="command-primary"
+                      disabled={isBusy || !selectedSfOpportunityId || !effectiveCommandIntent}
+                      type="submit"
+                    >
+                      {commandButtonLabel(status, effectiveCommandIntent)}
+                    </button>
+                  </div>
+                </form>
+
+                {order ? (
+                  <OrderDocument order={order} />
+                ) : latestQuote && agentAction?.kind === "quote" ? (
+                  <QuoteDocument
+                    isBusy={isBusy}
+                    onFinalize={() => void finalizeQuote(latestQuote.oracle_quote_id)}
+                    quote={latestQuote}
+                    status={status}
+                  />
+                ) : (
+                  <RecommendedProductsPanel
+                    isBusy={isBusy}
+                    lineItemBySku={lineItemBySku}
+                    onCreateQuote={createQuote}
+                    onPatchProduct={patchProduct}
+                    pricing={pricing}
+                    products={products}
+                    selectedProducts={selectedProducts}
+                    status={status}
+                  />
                 )}
+
+                {pricing ? (
+                  <section className="price-band-live" aria-label="Pricing summary">
+                    <SummaryItem label="Subtotal" value={formatCurrency(pricing.subtotal, pricing.currency)} />
+                    <SummaryItem label="Discount" value={formatCurrency(pricing.discount, pricing.currency)} />
+                    <SummaryItem label="Total" value={formatCurrency(pricing.total, pricing.currency)} />
+                  </section>
+                ) : null}
+
+                <AgentWorkbench
+                  action={agentAction}
+                  activity={activity}
+                  finalizableQuote={finalizableQuote}
+                  latestQuote={latestQuote}
+                  order={order}
+                  opportunity={opportunity}
+                  pricing={pricing}
+                  products={products}
+                  quotes={quotes}
+                  retrievedContext={retrievedContext}
+                  runSteps={runSteps}
+                  selectedProducts={selectedProducts}
+                />
               </section>
 
-              {order ? (
-                <section className="lane-section order-panel-live">
-                  <p className="eyebrow">Placed Order</p>
-                  <h2>{displayRecordId(order.oracle_order_id)}</h2>
-                  <p>
-                    Created from {displayRecordId(order.oracle_quote_id)} for{" "}
-                    {formatCurrency(order.total, order.currency)}.
-                  </p>
-                </section>
-              ) : null}
-
-              <section className="lane-section">
-                <h2>Activity Timeline</h2>
-                <div className="activity-stack">
-                  {activity.length === 0 ? (
-                    <p className="muted">No activity yet.</p>
+              <aside className="cloud-lane target-lane">
+                <LaneHeader
+                  badge="Write"
+                  badgeClass="cpq"
+                  kicker="Target System"
+                  title="Oracle CPQ Cloud"
+                />
+                <section className="lane-section">
+                  <h2>Quote Versions</h2>
+                  {quotes.length === 0 ? (
+                    <div className="empty-state">
+                      No quote versions exist for this opportunity yet.
+                    </div>
                   ) : (
-                    activity.slice(0, 8).map((event) => (
-                      <article className="activity-event" key={event.activity_id}>
-                        <span>{event.system}</span>
-                        <strong>{event.title}</strong>
-                        <p>{displayRecordIdsInText(event.detail)}</p>
-                      </article>
-                    ))
+                    <div className="quote-stack">
+                      {quotes.map((quote) => (
+                        <article className={`quote-card ${quote.status.toLowerCase()}`} key={quote.oracle_quote_id}>
+                          <div>
+                            <strong>{displayRecordId(quote.oracle_quote_id)}</strong>
+                            <span>{formatStatusLabel(quote.status)}</span>
+                          </div>
+                          <p>
+                            {quote.selected_product_count} products -{" "}
+                            {formatCurrency(quote.total, quote.currency)}
+                          </p>
+                          <button
+                            disabled={
+                              isBusy ||
+                              quote.status === "SUPERSEDED" ||
+                              quote.status === "ACCEPTED"
+                            }
+                            onClick={() => void finalizeQuote(quote.oracle_quote_id)}
+                            type="button"
+                          >
+                            {status === "finalizing" ? "Placing..." : "Finalize / Place Order"}
+                          </button>
+                        </article>
+                      ))}
+                    </div>
                   )}
-                </div>
-              </section>
-            </aside>
+                </section>
+
+                {order ? (
+                  <section className="lane-section order-panel-live">
+                    <p className="eyebrow">Placed Order</p>
+                    <h2>{displayRecordId(order.oracle_order_id)}</h2>
+                    <p>
+                      Created from {displayRecordId(order.oracle_quote_id)} for{" "}
+                      {formatCurrency(order.total, order.currency)}.
+                    </p>
+                  </section>
+                ) : null}
+
+                <details className="lane-section activity-panel">
+                  <summary className="section-title-row activity-summary">
+                    <div>
+                      <h2>Activity Timeline</h2>
+                      <p>{activity.length ? `Latest ${formatDateTime(activity[0]?.created_at)}` : "No activity yet"}</p>
+                    </div>
+                    <div className="workbench-summary-actions">
+                      <span className="source-badge cpq">{activity.length} Events</span>
+                      <span className="workbench-toggle" aria-hidden="true" />
+                    </div>
+                  </summary>
+                  <div className="activity-stack">
+                    {activity.length === 0 ? (
+                      <p className="muted">No activity yet.</p>
+                    ) : (
+                      activity.slice(0, 8).map((event) => (
+                        <article className="activity-event" key={event.activity_id}>
+                          <time dateTime={event.created_at}>
+                            <span>{formatDatePart(event.created_at)}</span>
+                            <strong>{formatTimePart(event.created_at)}</strong>
+                          </time>
+                          <div>
+                            <span>{event.system}</span>
+                            <strong>{event.title}</strong>
+                            <p>{displayRecordIdsInText(event.detail)}</p>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </details>
+              </aside>
+            </section>
           </section>
-        ) : (
+        ) : viewMode === "architecture" ? (
           <ArchitectureView
+            actionKind={architectureAction?.kind ?? "ready"}
             activity={activity}
             pricing={pricing}
             quotes={quotes}
@@ -969,6 +1031,8 @@ export default function Home() {
             runSteps={runSteps}
             steps={traceSteps}
           />
+        ) : (
+          <DeveloperView activeFlow={developerFlow} onSelectFlow={setDeveloperFlow} />
         )}
       </main>
     </div>
@@ -1040,64 +1104,44 @@ function SelectedContextBand({
   selectedProductCount: number;
 }) {
   return (
-    <section className="selected-context" aria-label="Selected Salesforce context">
-      <article className="context-card account-context">
-        <div className="context-heading">
-          <div>
-            <p className="eyebrow">Selected Salesforce Account</p>
-            <h2>{account?.name ?? "Select an account"}</h2>
-          </div>
-          <span>{account ? displayRecordId(account.sf_account_id) : "SF-A"}</span>
+    <section className="selected-context slim-context" aria-label="Selected Salesforce context">
+      <article className="slim-context-group">
+        <span className="record-id">{account ? displayRecordId(account.sf_account_id) : "SF-A"}</span>
+        <strong>{account?.name ?? "Select an account"}</strong>
+        <div className="compact-fields">
+          <em>{account?.segment ?? "Segment"}</em>
+          <em>{account ? formatCurrency(account.open_pipeline, "USD") : "Pipeline"}</em>
+          <em>{opportunityCount} opps</em>
         </div>
-        <DetailGrid
-          items={[
-            ["Segment", account?.segment ?? "-"],
-            ["Region", account?.region ?? "-"],
-            ["Industry", account?.industry ?? "-"],
-            ["Pipeline", account ? formatCurrency(account.open_pipeline, "USD") : "-"],
-            ["Opportunities", String(opportunityCount)],
-          ]}
-        />
       </article>
 
-      <article className="context-card opportunity-context">
-        <div className="context-heading">
-          <div>
-            <p className="eyebrow">Selected Salesforce Opportunity</p>
-            <h2>{opportunity?.name ?? "Select an opportunity"}</h2>
-          </div>
-          <span>{opportunity ? displayRecordId(opportunity.sf_opportunity_id) : "SF-O"}</span>
+      <article className="slim-context-group wide">
+        <span className="record-id">{opportunity ? displayRecordId(opportunity.sf_opportunity_id) : "SF-O"}</span>
+        <strong>{opportunity?.name ?? "Select an opportunity"}</strong>
+        <div className="compact-fields">
+          <em>{opportunity?.stage ?? "Stage"}</em>
+          <em>{opportunity ? formatCurrency(opportunity.amount, opportunity.currency) : "Amount"}</em>
+          <em>{opportunity?.target_close_date ?? "Close date"}</em>
+          <em>{opportunity?.risk_level ?? "Risk"}</em>
         </div>
-        <DetailGrid
-          items={[
-            ["Stage", opportunity?.stage ?? "-"],
-            ["Close Date", opportunity?.target_close_date ?? "-"],
-            ["Sites", opportunity ? String(opportunity.sites) : "-"],
-            [
-              "Budget",
-              opportunity ? formatCurrency(opportunity.budget, opportunity.currency) : "-",
-            ],
-            ["Risk", opportunity?.risk_level ?? "-"],
-            ["Incumbent", opportunity?.incumbent_vendor ?? "-"],
-          ]}
-        />
-        <div className="deal-progress-strip" aria-label="Deal progress">
-          <div>
-            <span>Selected Products</span>
-            <strong>{selectedProductCount}</strong>
-          </div>
-          <div>
-            <span>Estimated Total</span>
-            <strong>{pricing ? formatCurrency(pricing.total, pricing.currency) : "Pending"}</strong>
-          </div>
-          <div>
-            <span>Quote Versions</span>
-            <strong>{quoteCount}</strong>
-          </div>
-          <div>
-            <span>Order</span>
-            <strong>{order ? displayRecordId(order.oracle_order_id) : "Not placed"}</strong>
-          </div>
+      </article>
+
+      <article className="slim-context-status">
+        <div>
+          <span>Products</span>
+          <strong>{selectedProductCount}</strong>
+        </div>
+        <div>
+          <span>Total</span>
+          <strong>{pricing ? formatCurrency(pricing.total, pricing.currency) : "Pending"}</strong>
+        </div>
+        <div>
+          <span>Quotes</span>
+          <strong>{quoteCount}</strong>
+        </div>
+        <div>
+          <span>Order</span>
+          <strong>{order ? displayRecordId(order.oracle_order_id) : "Not placed"}</strong>
         </div>
       </article>
     </section>
@@ -1157,14 +1201,17 @@ function AgentWorkbench({
   const completedSteps = model.steps.filter((step) => step.status === "completed").length;
 
   return (
-    <section className="lane-section agent-workbench">
-      <div className="section-title-row workbench-title">
+    <details className="lane-section agent-workbench">
+      <summary className="section-title-row workbench-title">
         <div>
           <h2>Agent Workbench</h2>
           <p>{model.subtitle}</p>
         </div>
-        <span className="source-badge agent">{completedSteps}/{model.steps.length} Steps</span>
-      </div>
+        <div className="workbench-summary-actions">
+          <span className="source-badge agent">{completedSteps}/{model.steps.length} Steps</span>
+          <span className="workbench-toggle" aria-hidden="true" />
+        </div>
+      </summary>
 
       <div className="agent-status-strip">
         <article>
@@ -1214,7 +1261,7 @@ function AgentWorkbench({
           signalGroups,
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -1361,7 +1408,7 @@ function QuoteDocument({
         items={[
           ["Quote ID", displayRecordId(quote.oracle_quote_id)],
           ["Source Opportunity", displayRecordId(quote.sf_opportunity_id)],
-          ["Status", quote.status],
+          ["Status", formatStatusLabel(quote.status)],
           ["Total", formatCurrency(quote.total, quote.currency)],
           ["Discount", formatCurrency(quote.discount, quote.currency)],
           ["Created", formatDateTime(quote.created_at)],
@@ -1381,7 +1428,7 @@ function OrderDocument({ order }: { order: OrderRecord }) {
           <p className="eyebrow">Oracle CPQ Order</p>
           <h2>{displayRecordId(order.oracle_order_id)}</h2>
         </div>
-        <span className="source-badge cpq">{order.status}</span>
+        <span className="source-badge cpq">{formatStatusLabel(order.status)}</span>
       </div>
 
       <DocumentHeader
@@ -1389,7 +1436,7 @@ function OrderDocument({ order }: { order: OrderRecord }) {
           ["Order ID", displayRecordId(order.oracle_order_id)],
           ["Accepted Quote", displayRecordId(order.oracle_quote_id)],
           ["Source Opportunity", displayRecordId(order.sf_opportunity_id)],
-          ["Status", order.status],
+          ["Status", formatStatusLabel(order.status)],
           ["Total", formatCurrency(order.total, order.currency)],
           ["Placed", formatDateTime(order.placed_at)],
         ]}
@@ -1485,6 +1532,7 @@ function DetailGrid({ items }: { items: Array<[string, string]> }) {
 
 /** Render the trace, payloads, and governance contracts for the current flow. */
 function ArchitectureView({
+  actionKind,
   activity,
   pricing,
   quotes,
@@ -1492,6 +1540,7 @@ function ArchitectureView({
   runSteps,
   steps,
 }: {
+  actionKind: ArchitectureActionKind;
   activity: ActivityEvent[];
   pricing: Pricing | null;
   quotes: QuoteRecord[];
@@ -1514,14 +1563,14 @@ function ArchitectureView({
         </div>
         <div className="trace-list">
           {steps.map((step, index) => (
-            <details className={`trace-detail ${step.status}`} key={`${step.label}-${index}`} open={index < 5}>
+            <details className={`trace-detail ${step.status}`} key={`${step.label}-${index}`}>
               <summary>
                 <span className="trace-index">{String(index + 1).padStart(2, "0")}</span>
                 <div>
                   <strong>{step.label}</strong>
                   <span>{step.system} - {step.layer}</span>
                 </div>
-                <em>{step.status}</em>
+                <em>{formatStatusLabel(step.status)}</em>
               </summary>
               <div className="trace-payloads">
                 <PayloadPanel title="Input" payload={step.input} />
@@ -1530,6 +1579,8 @@ function ArchitectureView({
             </details>
           ))}
         </div>
+        <ArchitectureCodeFlow actionKind={actionKind} />
+        <ArchitectureRagFlow actionKind={actionKind} retrievedContext={retrievedContext} />
       </div>
 
       <aside className="architecture-aside">
@@ -1556,6 +1607,594 @@ function ArchitectureView({
           </div>
         </section>
       </aside>
+    </section>
+  );
+}
+
+const RECOMMEND_PRODUCT_CODE_FLOW = [
+  {
+    layer: "Frontend UI",
+    title: "User Command",
+    detail: "User submits the command form with intent recommend.",
+    code: "page.tsx:436\nexecuteCommand()",
+  },
+  {
+    layer: "Frontend UI",
+    title: "Run UI Handler",
+    detail: "The UI checks selected opportunity, clears stale quote/order state, and starts loading.",
+    code: "page.tsx:474\nrunRecommendation()",
+  },
+  {
+    layer: "Frontend UI",
+    title: "POST API Request",
+    detail: "The frontend sends the selected Salesforce opportunity and recommendation prompt.",
+    code: 'page.tsx:485\npostJson("/quote/recommendations")',
+  },
+  {
+    layer: "FastAPI",
+    title: "FastAPI Boundary",
+    detail: "FastAPI validates the request and creates initial LangGraph state.",
+    code: "main.py:236\nrecommend_quote()",
+  },
+  {
+    layer: "LangGraph",
+    title: "Build Graph",
+    detail: "The backend invokes the recommendation-only graph before quote creation.",
+    code: "main.py:256\nbuild_recommendation_graph()\n  .invoke(state)",
+  },
+  {
+    layer: "LangGraph",
+    title: "LangGraph Nodes",
+    detail: "The graph runs intent analysis, RAG, opportunity lookup, recommendation, pricing, and response.",
+    code: "graph.py:68\nanalyze -> retrieve_context\n-> get_opportunity -> recommend_products\n-> get_pricing -> respond",
+  },
+  {
+    layer: "MCP",
+    title: "MCP Recommendation Tool",
+    detail: "The agent calls MCP by tool name, and MCP looks up the registered handler.",
+    code: 'graph.py:242\nengine.execute(\n  "recommend_products",\n  {"opportunity": state["opportunity"]}\n)',
+  },
+  {
+    layer: "CPQ",
+    title: "CPQ Rules",
+    detail: "The handler validates payload, calls CPQ recommendation logic, and records activity.",
+    code: "opportunity_quote.py:52\nrecommend_products_tool()\nrecommend_products(opportunity)",
+  },
+  {
+    layer: "MCP",
+    title: "MCP Pricing Tool",
+    detail: "The graph prices the recommended bundle through the same MCP execution boundary.",
+    code: 'graph.py:258\nengine.execute(\n  "get_pricing",\n  {"recommendation": state["recommendation"]}\n)',
+  },
+  {
+    layer: "UI State",
+    title: "UI Updates",
+    detail: "The response populates products, pricing, RAG context, run steps, and architecture trace.",
+    code: "page.tsx:492\nsetProducts()\nsetPricing()\nsetRetrievedContext()\nsetRunSteps()",
+  },
+] as const;
+
+const RAG_CODE_FLOW = [
+  {
+    layer: "Setup",
+    title: "Ingest Knowledge",
+    detail: "Product, pricing, and playbook documents are embedded and stored before runtime.",
+    code: "services/rag/ingest.py\nSAMPLE_DOCUMENTS",
+  },
+  {
+    layer: "LangGraph",
+    title: "Keyword Gate",
+    detail: "The user command is checked for domain terms like sales playbook, pricing rules, and telecom.",
+    code: "graph.py:683\n_should_retrieve_context()",
+  },
+  {
+    layer: "MCP",
+    title: "Search Tool",
+    detail: "The agent crosses the MCP boundary instead of calling the retriever directly.",
+    code: 'graph.py:200\nengine.execute("search_knowledge")',
+  },
+  {
+    layer: "Retriever",
+    title: "Embed And Query",
+    detail: "The query is embedded with Ollama and matched against ChromaDB vectors.",
+    code: "retriever.py:28\nVectorStore.query(k=3)",
+  },
+  {
+    layer: "Response",
+    title: "Prompt Context",
+    detail: "Returned snippets become retrieved_context for the assistant prompt and UI trace.",
+    code: "graph.py:476\nCONTEXT:\\n...",
+  },
+] as const;
+
+const DEVELOPER_FLOWS: Record<
+  DeveloperFlowKey,
+  {
+    title: string;
+    subtitle: string;
+    steps: readonly {
+      layer: string;
+      title: string;
+      detail: string;
+      code: string;
+    }[];
+  }
+> = {
+  recommend: {
+    title: "Recommend Product Flow",
+    subtitle: "UI command to recommendation graph, MCP tools, CPQ rules, pricing, and UI state.",
+    steps: RECOMMEND_PRODUCT_CODE_FLOW,
+  },
+  rag: {
+    title: "RAG Retrieval Flow",
+    subtitle: "Knowledge ingestion and runtime search through MCP.search_knowledge.",
+    steps: RAG_CODE_FLOW,
+  },
+  backend: {
+    title: "Backend API Boundary",
+    subtitle: "FastAPI validates payloads and chooses graph or direct MCP execution.",
+    steps: [
+      {
+        layer: "Frontend",
+        title: "Business Action",
+        detail: "A UI button or command chooses the endpoint for recommendation, quote, or order.",
+        code: "page.tsx\nrunRecommendation()\ncreateQuote()\ncreateOrder()",
+      },
+      {
+        layer: "Frontend",
+        title: "POST Request",
+        detail: "The client sends a compact JSON payload with selected Salesforce and workflow context.",
+        code: 'postJson("/quote/recommendations", payload)',
+      },
+      {
+        layer: "Schema",
+        title: "Validate Body",
+        detail: "Pydantic validates request and response models.",
+        code: "schemas/quote.py\nRecommendationRequest",
+      },
+      {
+        layer: "FastAPI",
+        title: "Route Handler",
+        detail: "The route builds initial state and handles HTTP errors.",
+        code: "apps/backend/main.py\nrecommend_quote()",
+      },
+      {
+        layer: "LangGraph",
+        title: "Dispatch Agentic Work",
+        detail: "Recommendation requests invoke the compiled graph with the validated state.",
+        code: "build_recommendation_graph().invoke(state)",
+      },
+      {
+        layer: "MCP",
+        title: "Dispatch Tool Work",
+        detail: "Quote and order routes can call MCP tools directly after the boundary check.",
+        code: 'engine.execute("create_quote", payload)',
+      },
+      {
+        layer: "Response",
+        title: "Return Contract",
+        detail: "The backend returns dictionaries that the UI can render without knowing integration internals.",
+        code: "return RecommendationResponse(...)",
+      },
+    ],
+  },
+  langgraph: {
+    title: "LangGraph Orchestration",
+    subtitle: "StateGraph nodes pass AgentState through a deterministic workflow.",
+    steps: [
+      {
+        layer: "State",
+        title: "AgentState",
+        detail: "Shared typed dictionary carries user input and tool outputs.",
+        code: "services/agent/state.py\nclass AgentState",
+      },
+      {
+        layer: "Factory",
+        title: "Build Workflow",
+        detail: "The graph builder creates a StateGraph around the shared AgentState contract.",
+        code: "graph.py\nStateGraph(AgentState)",
+      },
+      {
+        layer: "Graph",
+        title: "Add Nodes",
+        detail: "Each node is one unit of workflow behavior.",
+        code: 'graph.add_node("analyze", _analyze_intent)',
+      },
+      {
+        layer: "Graph",
+        title: "Add Edges",
+        detail: "Edges define execution order between nodes.",
+        code: 'graph.add_edge("get_opportunity", "recommend_products")',
+      },
+      {
+        layer: "Node",
+        title: "Run Python Function",
+        detail: "Every node receives state, adds its output, and returns the changed state.",
+        code: "def _get_pricing(state):\n  return {**state, \"pricing\": pricing}",
+      },
+      {
+        layer: "Runtime",
+        title: "Invoke",
+        detail: "FastAPI invokes the compiled graph with initial state.",
+        code: "graph.compile().invoke(state)",
+      },
+      {
+        layer: "Response",
+        title: "Read Final State",
+        detail: "The route reads recommendation, pricing, retrieved context, and run steps from graph output.",
+        code: "result[\"recommendation\"]\nresult[\"pricing\"]",
+      },
+    ],
+  },
+  mcp: {
+    title: "MCP Tool Boundary",
+    subtitle: "Named tools protect execution against direct integration calls.",
+    steps: [
+      {
+        layer: "Setup",
+        title: "Load Tool Module",
+        detail: "The MCP factory imports the module that exposes opportunity and quote tool definitions.",
+        code: "services/mcp/factory.py\nfrom services.tools import opportunity_quote",
+      },
+      {
+        layer: "Registry",
+        title: "Register Tool",
+        detail: "Tool names map to Python handlers.",
+        code: 'ToolDefinition(name="get_pricing", handler=get_pricing_tool)',
+      },
+      {
+        layer: "Engine",
+        title: "Execute",
+        detail: "The engine validates dict payloads and result shape.",
+        code: 'engine.execute("get_pricing", {"recommendation": data})',
+      },
+      {
+        layer: "Handler",
+        title: "Validate Payload",
+        detail: "Tool handler checks required keys before integration code runs.",
+        code: '_required(payload, "recommendation")',
+      },
+      {
+        layer: "Integration",
+        title: "Delegate",
+        detail: "Handler calls Salesforce, CPQ, RAG, or data-layer code.",
+        code: "return get_pricing(recommendation)",
+      },
+      {
+        layer: "Response",
+        title: "Return Dict",
+        detail: "The handler returns a clean dictionary for graph state, API response, and UI rendering.",
+        code: "return {\"pricing\": pricing}",
+      },
+    ],
+  },
+  integrations: {
+    title: "Mock Enterprise Integrations",
+    subtitle: "Local Salesforce and Oracle CPQ behavior behind MCP handlers.",
+    steps: [
+      {
+        layer: "Salesforce",
+        title: "CRM Read",
+        detail: "Opportunity context comes from the Salesforce mock.",
+        code: "integrations/salesforce/mock.py\nget_opportunity()",
+      },
+      {
+        layer: "Repository",
+        title: "Runtime Data",
+        detail: "Mock integrations read seeded account, opportunity, product, and quote records.",
+        code: "services/data/repositories.py\nget_opportunity_by_sf_id()",
+      },
+      {
+        layer: "CPQ Catalog",
+        title: "Product Metadata",
+        detail: "Catalog owns SKU, category, billing model, and unit price.",
+        code: "integrations/cpq/catalog.py\nget_catalog_item()",
+      },
+      {
+        layer: "CPQ Rules",
+        title: "Recommend",
+        detail: "Requirements map to product SKUs and rule IDs.",
+        code: "integrations/cpq/recommendation.py\nrecommend_products()",
+      },
+      {
+        layer: "CPQ Pricing",
+        title: "Calculate Price",
+        detail: "Pricing applies quantity, term, discounts, and totals before quote creation.",
+        code: "integrations/cpq/pricing.py\ncalculate_pricing()",
+      },
+      {
+        layer: "CPQ Lifecycle",
+        title: "Quote/Order",
+        detail: "Quote creation and finalization produce Oracle-owned records.",
+        code: "integrations/cpq/quote.py\ncreate_quote()",
+      },
+    ],
+  },
+  data: {
+    title: "Data Layer And Runtime State",
+    subtitle: "SQLite stores business state, activity, and agent run history.",
+    steps: [
+      {
+        layer: "Database",
+        title: "Connect",
+        detail: "Runtime data lives in app_data/business.sqlite3.",
+        code: "services/data/database.py\nconnect()",
+      },
+      {
+        layer: "Seed",
+        title: "Initialize",
+        detail: "Demo accounts, opportunities, products, quotes, and orders seed once.",
+        code: "services/data/seed.py\nseed_if_empty()",
+      },
+      {
+        layer: "Repository",
+        title: "Read Business State",
+        detail: "The API reads account, opportunity, activity, quote, and order state through repositories.",
+        code: "repositories.py\nlist_accounts()\nlist_opportunities()",
+      },
+      {
+        layer: "Repository",
+        title: "Persist Quote",
+        detail: "Quote headers, line items, and activity are written together.",
+        code: "repositories.py\ncreate_quote_record()",
+      },
+      {
+        layer: "Audit",
+        title: "Agent Runs",
+        detail: "Run history and step records power trace/audit views.",
+        code: "repositories.py\nrecord_agent_run()",
+      },
+      {
+        layer: "Frontend",
+        title: "Refresh UI State",
+        detail: "The business view reloads source data after recommendation, quote, and order actions.",
+        code: "page.tsx\nloadSources()\nsetQuotes()\nsetActivity()",
+      },
+    ],
+  },
+  llm: {
+    title: "LLM Abstraction",
+    subtitle: "The agent depends on LLMClient, not a provider-specific SDK.",
+    steps: [
+      {
+        layer: "Interface",
+        title: "LLMClient",
+        detail: "Provider-neutral chat interface.",
+        code: "services/llm/client.py\nchat(messages)",
+      },
+      {
+        layer: "Factory",
+        title: "Select Provider",
+        detail: "Fallback returns None; Ollama returns OllamaClient.",
+        code: "create_llm_client()\nLLM_PROVIDER=ollama",
+      },
+      {
+        layer: "Graph",
+        title: "Optional Client",
+        detail: "Graph code can run deterministic fallback logic when no live model is configured.",
+        code: "llm = create_llm_client()\nif llm is None: fallback",
+      },
+      {
+        layer: "Prompt",
+        title: "Curated Context",
+        detail: "Graph builds prompts from tool outputs and RAG snippets.",
+        code: "graph.py\n_build_recommendation_prompt()",
+      },
+      {
+        layer: "Provider",
+        title: "Ollama",
+        detail: "Live mode posts non-streaming chat messages to Ollama.",
+        code: "ollama.py\nPOST /api/chat",
+      },
+      {
+        layer: "Response",
+        title: "Normalize Text",
+        detail: "Provider output is reduced to plain assistant text before entering graph state.",
+        code: "LLMResponse(content=...)",
+      },
+    ],
+  },
+};
+
+const DEVELOPER_FLOW_GROUPS: {
+  title: string;
+  description: string;
+  flows: DeveloperFlowKey[];
+}[] = [
+  {
+    title: "Setup",
+    description: "The pieces that exist before a user clicks a workflow button.",
+    flows: ["data", "integrations", "llm", "rag"],
+  },
+  {
+    title: "Runtime",
+    description: "The request path after a user starts work in the UI.",
+    flows: ["backend", "langgraph", "mcp", "recommend"],
+  },
+];
+
+/** Render the implementation code path for the active architecture action. */
+function ArchitectureCodeFlow({ actionKind }: { actionKind: ArchitectureActionKind }) {
+  if (actionKind !== "recommend") {
+    return null;
+  }
+
+  return (
+    <section className="code-flow-panel" aria-label="Recommend product code flow">
+      <div className="section-header compact">
+        <div>
+          <h2>Recommend Product Code Flow</h2>
+          <p>How the UI action crosses FastAPI, LangGraph, MCP, and CPQ code boundaries.</p>
+        </div>
+      </div>
+      <div className="code-flow-strip">
+        {RECOMMEND_PRODUCT_CODE_FLOW.map((step, index) => (
+          <article className="code-flow-node" key={step.title}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <em>{step.layer}</em>
+            <strong>{step.title}</strong>
+            <p>{step.detail}</p>
+            <code>{step.code}</code>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Render a tabbed developer-oriented code flow workbench. */
+function DeveloperView({
+  activeFlow,
+  onSelectFlow,
+}: {
+  activeFlow: DeveloperFlowKey;
+  onSelectFlow: (flow: DeveloperFlowKey) => void;
+}) {
+  const selected = DEVELOPER_FLOWS[activeFlow];
+  const activeGroup = DEVELOPER_FLOW_GROUPS.find((group) => group.flows.includes(activeFlow));
+
+  return (
+    <section className="developer-workspace">
+      <aside className="developer-tabs" aria-label="Developer flow tabs">
+        {DEVELOPER_FLOW_GROUPS.map((group) => (
+          <div className="developer-tab-group" key={group.title}>
+            <div className="developer-tab-heading">
+              <strong>{group.title}</strong>
+              <span>{group.description}</span>
+            </div>
+            {group.flows.map((flowKey) => (
+              <button
+                aria-pressed={activeFlow === flowKey}
+                className={activeFlow === flowKey ? "active" : ""}
+                key={flowKey}
+                onClick={() => onSelectFlow(flowKey)}
+                type="button"
+              >
+                {DEVELOPER_FLOWS[flowKey].title}
+              </button>
+            ))}
+          </div>
+        ))}
+      </aside>
+
+      <section className="developer-panel">
+        <div className="section-header">
+          <div>
+            <span className="developer-stage">{activeGroup?.title ?? "Flow"}</span>
+            <h2>{selected.title}</h2>
+            <p>{selected.subtitle}</p>
+          </div>
+          <span className="trace-count">{selected.steps.length} steps</span>
+        </div>
+        <CodeFlowStrip steps={selected.steps} />
+      </section>
+    </section>
+  );
+}
+
+/** Render one horizontal code-flow diagram. */
+function CodeFlowStrip({
+  steps,
+}: {
+  steps: readonly {
+    layer: string;
+    title: string;
+    detail: string;
+    code: string;
+  }[];
+}) {
+  return (
+    <div className="code-flow-strip developer-flow-strip">
+      {steps.map((step, index) => (
+        <article
+          className={`code-flow-node developer-flow-node ${getFlowLayerClass(step.layer)}`}
+          key={`${step.layer}-${step.title}`}
+        >
+          <span>{String(index + 1).padStart(2, "0")}</span>
+          <em>{step.layer}</em>
+          <strong>{step.title}</strong>
+          <p>{step.detail}</p>
+          <code>{step.code}</code>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function getFlowLayerClass(layer: string) {
+  const normalized = layer.toLowerCase();
+
+  if (normalized.includes("frontend") || normalized.includes("ui")) {
+    return "flow-layer-ui";
+  }
+  if (normalized.includes("api") || normalized.includes("schema") || normalized.includes("response")) {
+    return "flow-layer-api";
+  }
+  if (normalized.includes("graph") || normalized.includes("node") || normalized.includes("runtime")) {
+    return "flow-layer-agent";
+  }
+  if (normalized.includes("mcp") || normalized.includes("registry") || normalized.includes("handler")) {
+    return "flow-layer-mcp";
+  }
+  if (normalized.includes("cpq") || normalized.includes("salesforce") || normalized.includes("integration")) {
+    return "flow-layer-cpq";
+  }
+  if (
+    normalized.includes("data") ||
+    normalized.includes("database") ||
+    normalized.includes("repository") ||
+    normalized.includes("audit") ||
+    normalized.includes("seed") ||
+    normalized.includes("retriever")
+  ) {
+    return "flow-layer-data";
+  }
+  if (
+    normalized.includes("llm") ||
+    normalized.includes("factory") ||
+    normalized.includes("prompt") ||
+    normalized.includes("provider") ||
+    normalized.includes("interface")
+  ) {
+    return "flow-layer-llm";
+  }
+  return "flow-layer-default";
+}
+
+/** Render the RAG retrieval code path for recommendation runs. */
+function ArchitectureRagFlow({
+  actionKind,
+  retrievedContext,
+}: {
+  actionKind: ArchitectureActionKind;
+  retrievedContext: string[];
+}) {
+  if (actionKind !== "recommend") {
+    return null;
+  }
+
+  return (
+    <section className="code-flow-panel" aria-label="RAG retrieval code flow">
+      <div className="section-header compact">
+        <div>
+          <h2>RAG Retrieval Code Flow</h2>
+          <p>
+            How product, pricing, and playbook knowledge is retrieved through MCP.search_knowledge.
+          </p>
+        </div>
+        <span className="trace-count">{retrievedContext.length} snippets</span>
+      </div>
+      <div className="code-flow-strip rag-flow-strip">
+        {RAG_CODE_FLOW.map((step, index) => (
+          <article className="code-flow-node rag-flow-node" key={step.title}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <em>{step.layer}</em>
+            <strong>{step.title}</strong>
+            <p>{step.detail}</p>
+            <code>{step.code}</code>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
@@ -1904,7 +2543,7 @@ function buildAgentWorkbenchModel({
       systemDetail: "The middle layer passes selected products to CPQ without owning the quote record.",
       output: quote ? displayRecordId(quote.oracle_quote_id) : "No quote yet",
       outputDetail: quote
-        ? `${quote.status} - ${formatCurrency(quote.total, quote.currency)}`
+        ? `${formatStatusLabel(quote.status)} - ${formatCurrency(quote.total, quote.currency)}`
         : "Create a quote after at least one product is selected.",
       contextTitle: "Selected lines, quote record, pricing, and persistence evidence",
       steps: [
@@ -1955,7 +2594,7 @@ function buildAgentWorkbenchModel({
       systemDetail: "The app orchestrates the request; Oracle CPQ owns quote acceptance and order creation.",
       output: order ? displayRecordId(order.oracle_order_id) : "No order yet",
       outputDetail: order
-        ? `${order.status} - ${formatCurrency(order.total, order.currency)}`
+        ? `${formatStatusLabel(order.status)} - ${formatCurrency(order.total, order.currency)}`
         : "Finalize a customer-ready quote to create an order.",
       contextTitle: "Accepted quote, order record, ordered lines, and timeline evidence",
       steps: [
@@ -1976,7 +2615,7 @@ function buildAgentWorkbenchModel({
         {
           name: "Accept selected quote",
           detail: order
-            ? `${displayRecordId(order.oracle_quote_id)} moved to ACCEPTED.`
+            ? `${displayRecordId(order.oracle_quote_id)} moved to Accepted.`
             : "Customer-selected quote becomes the accepted version.",
           status: order ? "completed" : quote ? "active" : "pending",
         },
@@ -2186,7 +2825,7 @@ function renderWorkbenchContext({
           <div className="mini-metric-grid">
             <div>
               <span>Status</span>
-              <strong>{quote?.status ?? "-"}</strong>
+              <strong>{formatStatusLabel(quote?.status)}</strong>
             </div>
             <div>
               <span>Total</span>
@@ -2255,7 +2894,7 @@ function renderWorkbenchContext({
           <div className="mini-metric-grid">
             <div>
               <span>Status</span>
-              <strong>{quote?.status ?? (order ? "ACCEPTED" : "-")}</strong>
+              <strong>{formatStatusLabel(quote?.status ?? (order ? "ACCEPTED" : undefined))}</strong>
             </div>
             <div>
               <span>Quote Total</span>
@@ -2276,7 +2915,7 @@ function renderWorkbenchContext({
           <div className="mini-metric-grid">
             <div>
               <span>Status</span>
-              <strong>{order?.status ?? "-"}</strong>
+              <strong>{formatStatusLabel(order?.status)}</strong>
             </div>
             <div>
               <span>Total</span>
@@ -2553,14 +3192,8 @@ function commandButtonLabel(status: string, intent: CommandIntent) {
   if (status === "finalizing") {
     return "Creating order...";
   }
-  if (intent === "create_quote") {
-    return "Create Quote";
-  }
-  if (intent === "create_order") {
-    return "Create Order";
-  }
-  if (intent === "recommend") {
-    return "Recommend";
+  if (intent) {
+    return "Run Command";
   }
 
   return "Execute";
@@ -2592,16 +3225,16 @@ function buildNextBestAction({
     return `Order ${displayRecordId(order.oracle_order_id)} is placed. Review Architecture View for the full trace.`;
   }
   if (finalizableQuote) {
-    return `Customer-ready quote ${displayRecordId(finalizableQuote.oracle_quote_id)} can be finalized with "Create order".`;
+    return `Run Create Order to finalize quote ${displayRecordId(finalizableQuote.oracle_quote_id)}.`;
   }
   if (products.length === 0) {
-    return `Type "Recommend Product" for ${displayRecordId(opportunity.sf_opportunity_id)}.`;
+    return `Run Recommend Product for ${displayRecordId(opportunity.sf_opportunity_id)}.`;
   }
   if (selectedProducts.length === 0) {
     return "Select at least one recommended product before creating a quote.";
   }
 
-  return `Review ${selectedProducts.length} selected products, then type "Create quote".`;
+  return `Review ${selectedProducts.length} selected products, then run Create Quote.`;
 }
 
 /** Build the command text and intent for the next guided action. */
@@ -2699,6 +3332,20 @@ function displayRecordIdsInText(value: string) {
     .replace(/\bSF-OPP-(\d+)\b/g, "SF-O-$1");
 }
 
+/** Format enum-like status values for user-facing UI labels. */
+function formatStatusLabel(value?: string) {
+  if (!value) {
+    return "-";
+  }
+
+  return value
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 /** Normalize unknown caught values into a displayable error message. */
 function errorMessage(caught: unknown) {
   return caught instanceof Error ? caught.message : "Unable to complete request.";
@@ -2730,6 +3377,40 @@ function formatDateTime(value?: string) {
     minute: "2-digit",
     month: "short",
     year: "numeric",
+  }).format(date);
+}
+
+/** Format just the calendar date for compact timeline rows. */
+function formatDatePart(value?: string) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
+/** Format just the clock time for compact timeline rows. */
+function formatTimePart(value?: string) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 

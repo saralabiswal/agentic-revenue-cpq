@@ -16,6 +16,18 @@ from services.tools import create_default_tool_registry
 
 logger = logging.getLogger(__name__)
 
+# Agent orchestration overview:
+# - FastAPI builds the first AgentState dictionary and invokes one of these graphs.
+# - Each graph node receives state, returns partial state, and LangGraph merges it.
+# - Nodes never call Salesforce, CPQ, RAG, or SQLite directly; they call MCP tools.
+# - Response nodes convert tool outputs into API payloads for the frontend.
+
+
+# ---------------------------------------------------------------------------
+# Graph builders.
+# Each builder assembles a different workflow from the same small node functions.
+# ---------------------------------------------------------------------------
+
 
 def build_agent_graph(
     execution_engine: MCPExecutionEngine | None = None,
@@ -24,6 +36,7 @@ def build_agent_graph(
     """Build the full opportunity-to-quote LangGraph workflow."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
+    # Full chat flow: this is the most automated path and creates a draft quote.
     graph = StateGraph(AgentState)
     graph.add_node("analyze", _analyze_intent)
     graph.add_node("retrieve_context", _retrieve_context(engine))
@@ -51,6 +64,7 @@ def build_recommendation_graph(
     """Build a recommendation-only LangGraph workflow for sales review."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
+    # Review flow: stop before quote creation so the sales rep can edit selections.
     graph = StateGraph(AgentState)
     graph.add_node("analyze", _analyze_intent)
     graph.add_node("retrieve_context", _retrieve_context(engine))
@@ -73,6 +87,7 @@ def build_pricing_graph(execution_engine: MCPExecutionEngine | None = None):
     """Build a pricing-only graph for selected products."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
+    # Repricing flow: frontend already has selected products, so recommendation is skipped.
     graph = StateGraph(AgentState)
     graph.add_node("prepare_selection", _prepare_selection_recommendation)
     graph.add_node("get_pricing", _get_pricing(engine))
@@ -92,6 +107,7 @@ def build_quote_creation_graph(
     """Build a graph that prices selected products and creates a quote."""
     engine = execution_engine or MCPExecutionEngine(create_default_tool_registry())
 
+    # Quote flow: frontend-approved selections are priced and persisted as a quote.
     graph = StateGraph(AgentState)
     graph.add_node("prepare_selection", _prepare_selection_recommendation)
     graph.add_node("get_pricing", _get_pricing(engine))
@@ -104,6 +120,13 @@ def build_quote_creation_graph(
     graph.add_edge("create_quote", "respond")
     graph.add_edge("respond", END)
     return graph.compile()
+
+
+# ---------------------------------------------------------------------------
+# State preparation nodes.
+# These normalize frontend/backend input into the common state shape used by
+# downstream pricing, quote, and response nodes.
+# ---------------------------------------------------------------------------
 
 
 def _analyze_intent(state: AgentState) -> AgentState:
@@ -127,6 +150,7 @@ def _analyze_intent(state: AgentState) -> AgentState:
 def _prepare_selection_recommendation(state: AgentState) -> AgentState:
     """Convert selected products into the recommendation shape expected by pricing."""
     sf_opportunity_id = _extract_sf_opportunity_id(state)
+    # Deselected products stay in the UI but should not be sent to CPQ pricing.
     selected_products = [
         product
         for product in state.get("selected_products", [])
@@ -141,6 +165,7 @@ def _prepare_selection_recommendation(state: AgentState) -> AgentState:
         "intent": "quote_selection",
         "sf_opportunity_id": sf_opportunity_id,
         "selected_products": selected_products,
+        # Pricing expects the same structure produced by the recommendation tool.
         "recommendation": {
             "sf_opportunity_id": sf_opportunity_id,
             "currency": state.get("currency", "USD"),
@@ -151,17 +176,27 @@ def _prepare_selection_recommendation(state: AgentState) -> AgentState:
     }
 
 
+# ---------------------------------------------------------------------------
+# MCP tool nodes.
+# These closures bind the execution engine once, then LangGraph calls the inner
+# node with the current state during graph execution.
+# ---------------------------------------------------------------------------
+
+
 def _retrieve_context(engine: MCPExecutionEngine):
     """Create a graph node that retrieves RAG context when the prompt needs it."""
 
     def node(state: AgentState) -> AgentState:
         """Retrieve relevant RAG snippets or skip retrieval for non-domain prompts."""
         user_input = state.get("user_input", "")
+        # RAG is intentionally conditional so generic commands do not require
+        # embeddings, ChromaDB, or Ollama to be available.
         if not _should_retrieve_context(user_input):
             logger.info("Agent RAG skipped: reason=no_domain_keyword")
             return {"retrieved_context": []}
 
         logger.info("Agent requesting RAG context through MCP")
+        # Agent -> MCP -> search_knowledge tool -> Retriever -> ChromaDB.
         result = engine.execute(
             "search_knowledge",
             {
@@ -189,6 +224,7 @@ def _get_opportunity(engine: MCPExecutionEngine):
             state["sf_opportunity_id"],
         )
         opportunity = engine.execute(
+            # Agent -> MCP -> get_opportunity tool -> Salesforce mock/data layer.
             "get_opportunity",
             {"sf_opportunity_id": state["sf_opportunity_id"]},
         )
@@ -204,6 +240,7 @@ def _recommend_products(engine: MCPExecutionEngine):
         """Request CPQ product recommendations for the loaded opportunity."""
         logger.info("Agent requesting product recommendation through MCP")
         recommendation = engine.execute(
+            # Agent -> MCP -> recommend_products tool -> CPQ recommendation rules.
             "recommend_products",
             {"opportunity": state["opportunity"]},
         )
@@ -219,6 +256,7 @@ def _get_pricing(engine: MCPExecutionEngine):
         """Price the current recommendation through the MCP pricing tool."""
         logger.info("Agent requesting pricing through MCP")
         pricing = engine.execute(
+            # Agent -> MCP -> get_pricing tool -> CPQ pricing rules.
             "get_pricing",
             {"recommendation": state["recommendation"]},
         )
@@ -235,11 +273,15 @@ def _create_quote(engine: MCPExecutionEngine):
         logger.info("Agent requesting quote creation through MCP")
         payload = {"pricing": state["pricing"]}
         if state.get("persist_quote"):
+            # Persisting is enabled only for explicit quote creation flows.
             payload["persist"] = True
 
+        # Agent -> MCP -> create_quote tool -> CPQ quote logic / SQLite.
         quote = engine.execute("create_quote", payload)
         return {
             "quote": quote,
+            # The frontend architecture panel uses this grouped payload to show
+            # what each layer produced.
             "tools_output": {
                 "opportunity": state.get("opportunity", {}),
                 "recommendation": state.get("recommendation", {}),
@@ -249,6 +291,13 @@ def _create_quote(engine: MCPExecutionEngine):
         }
 
     return node
+
+
+# ---------------------------------------------------------------------------
+# Response nodes and prompt builders.
+# When an LLM client exists, prompts are sent to it. Otherwise deterministic
+# fallback messages keep tests and local fallback mode stable.
+# ---------------------------------------------------------------------------
 
 
 def _respond(llm_client: LLMClient | None):
@@ -268,6 +317,8 @@ def _respond(llm_client: LLMClient | None):
         )
 
         if llm_client is not None:
+            # The LLM sees only curated business output and retrieved context,
+            # not raw database rows or internal service objects.
             assistant_message = llm_client.chat(
                 _build_response_prompt(
                     products=recommendation["products"],
@@ -284,6 +335,7 @@ def _respond(llm_client: LLMClient | None):
             "assistant_message": assistant_message,
             "final_answer": final_answer,
             "status": "completed",
+            # `response` is shaped for FastAPI/Pydantic response models.
             "response": {
                 "message": final_answer,
                 "products": recommendation["products"],
@@ -311,6 +363,8 @@ def _respond_recommendation(llm_client: LLMClient | None):
         )
 
         if llm_client is not None:
+            # Recommendation prompts explicitly tell the model not to claim a
+            # quote exists before the user reviews selections.
             assistant_message = llm_client.chat(
                 _build_recommendation_prompt(
                     opportunity=state["opportunity"],
@@ -420,6 +474,8 @@ def _build_response_prompt(
         }
     ]
     if retrieved_context:
+        # Retrieved snippets are injected as system context so the assistant can
+        # ground its explanation without inventing product or pricing facts.
         messages.append(
             {
                 "role": "system",
@@ -461,6 +517,7 @@ def _build_recommendation_prompt(
         }
     ]
     if retrieved_context:
+        # This prompt is review-only; quote creation is a separate user action.
         messages.append(
             {
                 "role": "system",
@@ -535,6 +592,7 @@ def _build_run_steps(
     include_recommendation: bool = True,
 ) -> list[dict[str, str]]:
     """Create UI trace steps from graph state and completed tool calls."""
+    # These are user-facing trace rows, not the internal LangGraph execution log.
     steps: list[dict[str, str]] = []
     if include_recommendation:
         steps.extend(
@@ -599,12 +657,14 @@ def _extract_sf_opportunity_id(state: AgentState) -> str:
     if state.get("sf_opportunity_id"):
         return state["sf_opportunity_id"]
 
+    # Chat mode can infer an opportunity id if the user typed one into the prompt.
     for message in state.get("messages", []):
         content = str(message.get("content", ""))
         match = re.search(r"\bSF-OPP-\d+\b", content)
         if match:
             return match.group(0)
 
+    # The demo defaults to the first seeded opportunity when no id is provided.
     return "SF-OPP-001"
 
 
@@ -623,6 +683,8 @@ def _extract_user_input(state: AgentState) -> str:
 def _should_retrieve_context(user_input: str) -> bool:
     """Decide whether a prompt should trigger knowledge retrieval."""
     normalized = user_input.lower()
+    # Keyword gating keeps RAG optional and predictable. This is deliberately
+    # simple for the demo; a production system might use intent classification.
     knowledge_keywords = (
         "catalog",
         "pricing rule",

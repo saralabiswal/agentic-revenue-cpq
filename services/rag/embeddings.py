@@ -12,6 +12,11 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# Embedding flow:
+# - The caller passes plain text strings.
+# - Each string is sent to Ollama's /api/embeddings endpoint.
+# - Returned numeric vectors are passed to VectorStore for semantic search.
+
 
 class EmbeddingClientError(RuntimeError):
     """Raised when Ollama returns an unusable embedding response."""
@@ -29,12 +34,15 @@ class EmbeddingClient:
     ) -> None:
         """Create an embedding client for the configured Ollama endpoint."""
         self.model = model
+        # OLLAMA_BASE_URL lets Docker/local runs point to different Ollama hosts.
         self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")).rstrip("/")
+        # Tests can inject a mock httpx.Client; runtime code uses a real client.
         self._client = http_client or httpx.Client(timeout=timeout)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate one embedding vector for each supplied text."""
         logger.info("Generating embeddings: model=%s document_count=%s", self.model, len(texts))
+        # Ollama embeddings endpoint handles one prompt at a time in this client.
         embeddings = [self._embed_one(text) for text in texts]
         logger.info("Generated embeddings: model=%s embedding_count=%s", self.model, len(embeddings))
         return embeddings
@@ -65,7 +73,9 @@ class EmbeddingClient:
         payload: dict[str, Any] = response.json()
         embedding = payload.get("embedding")
         if not isinstance(embedding, list):
+            # Fail clearly if Ollama is reachable but returns an unexpected shape.
             logger.error("Ollama embedding response missing embedding: model=%s", self.model)
             raise EmbeddingClientError("Ollama response did not include an embedding.")
 
+        # Normalize numeric types because JSON may return ints or floats.
         return [float(value) for value in embedding]

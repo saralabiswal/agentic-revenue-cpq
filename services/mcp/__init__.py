@@ -11,6 +11,7 @@ from services.mcp.registry import (
     ToolRegistryError,
 )
 
+# Public MCP API used by agent graph and tool registration modules.
 __all__ = [
     "MCPExecutionEngine",
     "ToolDefinition",

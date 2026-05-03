@@ -12,6 +12,12 @@ from services.rag.vector_store import VectorStore
 
 logger = logging.getLogger(__name__)
 
+# RAG ingestion flow:
+# - SAMPLE_DOCUMENTS are the demo knowledge base.
+# - ingest_sample_documents() sends text to the embedding client.
+# - Embeddings and original text are stored together in ChromaDB.
+# - The search_knowledge MCP tool later retrieves these documents by meaning.
+
 
 @dataclass(frozen=True)
 class KnowledgeDocument:
@@ -77,8 +83,10 @@ def ingest_sample_documents(
     vector_store: VectorStore | None = None,
 ) -> int:
     """Embed and store sample product, pricing, and playbook documents."""
+    # Dependency injection keeps tests fast and avoids requiring live Ollama/Chroma.
     client = embedding_client or EmbeddingClient()
     store = vector_store or VectorStore()
+    # IDs must stay stable so repeated ingestion upserts the same logical documents.
     ids = [document.id for document in SAMPLE_DOCUMENTS]
     documents = [document.text for document in SAMPLE_DOCUMENTS]
     logger.info("Knowledge ingestion started: document_count=%s", len(documents))
@@ -89,5 +97,6 @@ def ingest_sample_documents(
 
 
 if __name__ == "__main__":
+    # Manual local setup path: `uv run python -m services.rag.ingest`.
     count = ingest_sample_documents()
     print(f"Ingested {count} knowledge documents.")

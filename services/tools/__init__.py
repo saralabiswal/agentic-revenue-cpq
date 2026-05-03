@@ -18,6 +18,8 @@ from services.tools.opportunity_quote import (
     register_opportunity_quote_tools,
 )
 
+# Public business-tool API. The MCP factory imports from here to assemble the
+# default tool registry for backend and agent calls.
 __all__ = [
     "create_default_tool_registry",
     "create_quote_tool",

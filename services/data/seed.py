@@ -8,6 +8,12 @@ from typing import Any
 
 from integrations.cpq.catalog import list_catalog_items
 
+# Seed data flow:
+# - database.initialize_database() calls seed_if_empty().
+# - Account/opportunity records simulate Salesforce CRM data.
+# - Product/pricing/quote/order records simulate Oracle CPQ data.
+# - Activity records give the frontend an initial timeline.
+
 
 ACCOUNTS: tuple[dict[str, Any], ...] = (
     {
@@ -459,8 +465,10 @@ def seed_if_empty(connection: sqlite3.Connection) -> None:
     """Populate demo data only when the database has no accounts yet."""
     has_accounts = connection.execute("SELECT 1 FROM accounts LIMIT 1").fetchone()
     if has_accounts:
+        # The app calls initialization often; seeding must stay idempotent.
         return
 
+    # Insert parent records before child records to satisfy foreign keys.
     _seed_accounts(connection)
     _seed_opportunities(connection)
     _seed_products(connection)
@@ -484,6 +492,7 @@ def _seed_accounts(connection: sqlite3.Connection) -> None:
 def _seed_opportunities(connection: sqlite3.Connection) -> None:
     """Insert seeded Salesforce opportunity records."""
     for opportunity in OPPORTUNITIES:
+        # Opportunity core fields live in the opportunity table.
         connection.execute(
             """
             INSERT INTO opportunities (
@@ -499,6 +508,8 @@ def _seed_opportunities(connection: sqlite3.Connection) -> None:
             """,
             opportunity,
         )
+        # Requirements are one-to-many so recommendation logic and the UI can
+        # reason over individual requirement strings.
         connection.executemany(
             """
             INSERT INTO opportunity_requirements (sf_opportunity_id, requirement)
@@ -513,6 +524,8 @@ def _seed_opportunities(connection: sqlite3.Connection) -> None:
 
 def _seed_products(connection: sqlite3.Connection) -> None:
     """Insert seeded Oracle CPQ product records."""
+    # Catalog source of truth is integration/cpq/catalog.py; SQLite mirrors it
+    # so local business data can show product records alongside quotes/orders.
     connection.executemany(
         """
         INSERT INTO products (
@@ -561,6 +574,7 @@ def _seed_pricing_rules(connection: sqlite3.Connection) -> None:
 def _seed_quotes(connection: sqlite3.Connection) -> None:
     """Insert seeded quote history records."""
     for quote in QUOTE_SEEDS:
+        # Quote header stores totals/status; line items store the priced products.
         connection.execute(
             """
             INSERT INTO quotes (
@@ -600,6 +614,8 @@ def _seed_quotes(connection: sqlite3.Connection) -> None:
 def _seed_orders(connection: sqlite3.Connection) -> None:
     """Insert seeded order records."""
     for order in ORDER_SEEDS:
+        # Orders are created from accepted quotes in the same shape the runtime
+        # finalization path uses.
         connection.execute(
             """
             INSERT INTO orders (
@@ -622,6 +638,7 @@ def _seed_orders(connection: sqlite3.Connection) -> None:
             """,
             (order["oracle_quote_id"],),
         ).fetchall()
+        # Copy line items from the seed quote so the placed order is self-contained.
         connection.executemany(
             """
             INSERT INTO order_line_items (
@@ -649,6 +666,8 @@ def _seed_orders(connection: sqlite3.Connection) -> None:
 
 def _seed_activity(connection: sqlite3.Connection) -> None:
     """Insert seeded activity timeline records."""
+    # These events let the UI demonstrate timeline behavior before the user
+    # creates any new quote/order activity.
     events = [
         (
             "ACT-SF-OPP-001-001",

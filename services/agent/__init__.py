@@ -11,6 +11,8 @@ from services.agent.graph import (
 )
 from services.agent.state import AgentState
 
+# Re-export graph builders so backend code can import from `services.agent`
+# without knowing the internal module layout.
 __all__ = [
     "AgentState",
     "build_agent_graph",
