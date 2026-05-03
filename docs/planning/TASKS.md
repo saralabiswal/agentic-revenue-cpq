@@ -8,8 +8,8 @@ Current status: all planned tasks 1-22 are implemented and validated.
 Post-task UI and documentation enhancements are tracked below.
 
 Latest validation:
-- Python tests: `77 passed`
-- Frontend build: `npm run build` passed after Architecture View update
+- Python tests: `78 passed`
+- Frontend build: `npm run build` passed after Business/Architecture/Developer View update
 - Docker build: `docker compose build backend frontend` passed
 - Live Ollama backend `/chat` smoke test passed before the command-center expansion
 
@@ -50,8 +50,10 @@ Implemented:
 - Quote finalization and order placement
 - Quote/product/pricing/explainability display
 - Structured recommendation table with CPQ rule, category, billing model, quantity, term, and line-price details
-- Business View / Architecture View mode switch
+- Business View / Architecture View / Developer View mode switch
+- Developer View with setup/runtime code-flow diagrams
 - Architecture trace console with layer badges, expandable payloads, layer contracts, and decision points
+- Compact professional UI with natural title/sentence-case labels, command picker, collapsed Agent Workbench, and collapsed Activity Timeline
 - Loading and error states
 
 ---
@@ -295,11 +297,11 @@ Purpose:
 ### Enhancement B: Architecture View - Done
 
 Implemented:
-- Business View / Architecture View switch.
+- Business View / Architecture View / Developer View switch.
 - Architecture trace from sales rep command to quote creation.
 - Architecture trace now extends through customer quote finalization and order placement.
 - Layer badges for Human, Agent, MCP + RAG, MCP + Salesforce, MCP + CPQ, and LLMClient.
-- Expandable trace details with input and output payloads.
+- Collapsed-by-default trace details with input and output payloads.
 - Layer contract panel explaining architecture ownership.
 - Decision point panel for RAG trigger, CPQ rules, discounts, and human approval.
 - Live trace status driven by the current recommendation, pricing, product selection, and quote state.
@@ -328,11 +330,40 @@ Purpose:
 - Move the app away from a static single-opportunity demo.
 - Match the real business model where one account can own many opportunities, one opportunity can produce many quotes, and one customer-selected quote becomes an order.
 
+### Enhancement D: Developer View - Done
+
+Implemented:
+- Added third top-level view: Developer View.
+- Grouped flows as Setup and Runtime.
+- Setup flows: Data Layer and Runtime State, Mock Enterprise Integrations, LLM Abstraction, RAG Retrieval.
+- Runtime flows: Backend API Boundary, LangGraph Orchestration, MCP Tool Boundary, Recommend Product Flow.
+- Numbered code-flow cards matching the standalone recommendation-flow diagram style.
+
+Purpose:
+- Teach the implementation by showing how code paths cross frontend, backend, LangGraph, MCP, RAG, integration, and data boundaries.
+- Keep architecture learning in the app without cluttering the business workflow.
+
+### Enhancement E: Business UI Polish - Done
+
+Implemented:
+- Renamed the product surface to Enterprise AI Agentic Workflow.
+- Clarified the revenue-flow ownership model: Read Salesforce, Orchestrate Agent + MCP, Write Oracle CPQ.
+- Reworked Business View into a compact source selector, command area, recommended products, collapsed Agent Workbench, and narrower Oracle CPQ target lane.
+- Replaced command shortcut buttons with a clear command picker and Run Command action.
+- Added Enter-to-run behavior in Command details, with Shift+Enter reserved for a new line.
+- Collapsed Activity Timeline by default and added date/time presentation for events.
+- Removed forced all-caps styling and refined typography for a more professional app feel.
+
+Purpose:
+- Make the demo read as a polished enterprise application rather than a prototype dashboard.
+- Reduce confusion between selecting a command and executing a command.
+- Keep diagnostics available without taking over the business workflow.
+
 ---
 
 ## Phase 10: Live Data And First-Class Business Flow Plan
 
-Status: implementation in progress. Completed items reflect the current local app.
+Status: implemented and validated in the current local app.
 
 ### Task 23: External ID Naming Convention - Done
 
@@ -448,10 +479,10 @@ Implementation checklist:
 - [x] Record activity when order is placed.
 - [x] Persist Agent/MCP/RAG/CPQ run steps for Architecture View and run history APIs.
 
-### Task 29: First-Class Command Execution - Partial
+### Task 29: First-Class Command Execution - Done
 
 Goal:
-- Allow typed commands to execute the same flow as UI buttons. Current implementation supports the recommendation command path; a full command parser for quote/order actions remains future work.
+- Allow command selection or typed command details to execute the same recommendation, quote, and order flows as UI actions.
 
 Example commands:
 - `Show opportunities for Northstar Telecom`
@@ -461,11 +492,13 @@ Example commands:
 - `Finalize Oracle quote ORA-Q-001-002`
 
 Implementation checklist:
-- [x] Add command bar for recommendation as the primary recommendation action.
-- [ ] Add command parser or intent router.
+- [x] Add command picker and command details field.
+- [x] Add command parser or intent router for recommend, quote, and order intents.
 - [x] Add session/current selection state.
 - [x] Route recommendation command execution through Agent and MCP.
+- [x] Route quote and order command execution through backend/MCP lifecycle endpoints.
 - [x] Require explicit user action for quote creation and order placement.
+- [x] Support Enter to run from Command details and Shift+Enter for multiline input.
 - [x] Update Business View from command results.
 - [x] Update Architecture View from command run trace.
 
@@ -476,13 +509,14 @@ Goal:
 
 Implementation checklist:
 - [x] Add top system ownership map.
-- [x] Organize Business View into Salesforce lane, Agent lane, and Oracle CPQ lane.
+- [x] Organize Business View into Salesforce source context, Agentic Orchestration work area, and Oracle CPQ target lane.
 - [x] Show sync/status badges for Salesforce reads and Oracle CPQ writes.
 - [x] Add account/opportunity portfolio summary.
 - [x] Add quote version comparison.
 - [x] Add order summary.
-- [x] Add activity timeline.
+- [x] Add collapsed activity timeline with event counts and timestamps.
 - [x] Keep Architecture View one click away.
+- [x] Add Developer View one click away.
 
 ### Task 31: Tests And Validation For Live Flow - Done
 

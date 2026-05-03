@@ -4,14 +4,14 @@
 
 Enterprise AI Agent Platform enabling:
 - Salesforce Opportunity -> Oracle CPQ Quote automation
-- Telecom data infrastructure quote command center
+- Enterprise AI Agentic Workflow revenue-flow platform
 - Account -> Opportunities -> Quotes -> Order lifecycle
 - NetApp-aligned mock catalog, pricing, and support/service bundles
 - MCP-based tool orchestration
 - LangGraph agent reasoning
 - RAG-backed knowledge retrieval exposed only through MCP
 - LLM abstraction with Ollama in phase 1 and vLLM as a future provider path
-- FastAPI backend and Next.js frontend workbench
+- FastAPI backend and Next.js frontend with Business, Architecture, and Developer views
 
 Implemented core flow:
 User -> Frontend -> Backend -> Agent -> MCP -> Tools/RAG -> LLMClient -> Response
@@ -32,9 +32,10 @@ Backend:
 
 Frontend:
 - Next.js
-- React command center with Business View and Architecture View
-- Business View: account selection, opportunity selection, quote builder, product selection, repricing, quote versions, order placement, and explainability panels
-- Architecture View: live layer trace, expandable payloads, layer contracts, and decision points
+- React app with Business View, Architecture View, and Developer View
+- Business View: compact Salesforce read context, command picker, recommended products, selected-product repricing, quote versions, order placement, collapsed Agent Workbench, and collapsed Activity Timeline
+- Architecture View: live layer trace collapsed by default, expandable payloads, layer contracts, and run evidence
+- Developer View: setup/runtime grouped code-flow diagrams for implementation teaching
 
 LLM:
 - Ollama chat model: `llama3.1`
@@ -45,7 +46,7 @@ Data and deployment:
 - Docker Compose
 - Local Chroma persistence at `./chroma_db`
 - Docker volumes for Chroma and Ollama data
-- Planned local SQLite persistence for business lifecycle data
+- Local SQLite persistence for business lifecycle data in `app_data/business.sqlite3`
 
 ---
 
@@ -162,6 +163,14 @@ cd apps/frontend
 npm run dev
 ```
 
+Run frontend production build/server:
+
+```bash
+cd apps/frontend
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run build
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run start -- --hostname 127.0.0.1 --port 3000
+```
+
 Docker:
 
 ```bash
@@ -185,6 +194,7 @@ docker compose up --build
   - `list_quotes`
   - `finalize_quote`
   - `list_orders`
+  - `list_activity`
   - `search_knowledge`
 - `search_knowledge` is the only entry point to RAG.
 
@@ -209,7 +219,7 @@ The backend uses the factory. The agent receives an optional `LLMClient` and nev
 
 ## 9. Agent Flow
 
-Implemented LangGraph flow:
+Implemented LangGraph recommendation flow:
 
 START
  -> analyze
@@ -217,7 +227,6 @@ START
  -> get_opportunity
  -> recommend_products
  -> get_pricing
- -> create_quote
  -> respond
 END
 
@@ -255,7 +264,9 @@ The Next.js command center:
 - Renders account, opportunity, quote id, order id, total, structured product lines, discounts, quote versions, RAG context, assistant summary, and agent run steps.
 - Provides Business View for the sales workflow.
 - Provides Architecture View for explaining the live run across Human, Agent, MCP, RAG, Salesforce, CPQ, LLMClient, customer finalization, and order placement.
-- Shows expandable Architecture View payloads for inputs and outputs, using frontend state returned by the backend.
+- Shows collapsed-by-default Architecture View payloads for inputs and outputs, using frontend state returned by the backend.
+- Provides Developer View for setup/runtime implementation code-flow diagrams.
+- Uses a command picker plus command details field; Enter runs the command and Shift+Enter inserts a new line.
 - Uses `NEXT_PUBLIC_API_BASE_URL`, defaulting to `http://localhost:8000`.
 
 Frontend rules:
@@ -266,11 +277,11 @@ Frontend rules:
 
 ---
 
-## 10.1 Planned Live Data Flow
+## 10.1 Implemented Live Data Flow
 
-The next implementation phase should make the app feel live through persistent local data.
+The app feels live through persistent local data.
 
-Planned flow:
+Implemented flow:
 
 ```text
 Salesforce Account sf_account_id
@@ -281,16 +292,17 @@ Salesforce Account sf_account_id
  -> Oracle CPQ Order oracle_order_id
 ```
 
-Planned persistence:
+Implemented persistence:
 - SQLite for business lifecycle state.
 - ChromaDB remains the vector store for RAG.
-- Agent run history and activity events should be persisted.
-- Quote and order lifecycle should survive backend restarts.
+- Agent run history and activity events are persisted.
+- Quote and order lifecycle survives backend restarts.
 
-Planned UI story:
+Implemented UI story:
 - Salesforce CRM Cloud lane owns Accounts and Opportunities.
 - Agentic Orchestration App lane owns commands, reasoning, MCP execution, RAG evidence, and recommendations.
 - Oracle CPQ Cloud lane owns Quotes, Quote Lines, Orders, and Order Lines.
+- Developer View owns code-path teaching for setup and runtime boundaries.
 
 ---
 
@@ -311,8 +323,8 @@ Logs should include operational metadata and counts, not full sensitive payloads
 ## 12. Testing And Validation
 
 Current validation:
-- Python tests: `77 passed`
-- Frontend production build: `npm run build` passed after Architecture View update
+- Python tests: `78 passed`
+- Frontend production build: `npm run build` passed after Business/Architecture/Developer View update
 - Docker image build: `docker compose build backend frontend` passed
 - Live Ollama `/chat` smoke test passed before the command-center expansion
 

@@ -1,16 +1,16 @@
 # Product Requirements Document (PRD)
-## Enterprise AI Agent Platform - Telecom Quote Command Center
+## Enterprise AI Agent Platform - Enterprise AI Agentic Workflow
 
 ---
 
 ## 1. Objective
 
-Build a standalone AI agent platform that automates Salesforce Opportunity -> Oracle CPQ Quote workflows using:
+Build a standalone AI agent platform that demonstrates the revenue workflow from Salesforce Opportunity to Oracle CPQ Quote and Order using:
 - LangGraph for agent orchestration
 - MCP for all execution/tool access
 - `LLMClient` for provider-neutral reasoning
 - RAG for context-aware telecom infrastructure sales knowledge
-- FastAPI and Next.js for a usable local application
+- FastAPI and Next.js for a usable local application with Business, Architecture, and Developer views
 
 ---
 
@@ -33,7 +33,7 @@ Telecom infrastructure sales workflows are fragmented across CRM, CPQ, product c
 
 ### Included
 
-- Live command center in Next.js
+- Live Enterprise AI Agentic Workflow app in Next.js
 - FastAPI backend with `/health`, `/chat`, `/quote/recommendations`, `/quote/pricing`, and `/quote/create`
 - Account, opportunity, quote-history, and quote-finalization APIs
 - LangGraph agent flow
@@ -43,7 +43,10 @@ Telecom infrastructure sales workflows are fragmented across CRM, CPQ, product c
 - NetApp-aligned mock product catalog for telecom infrastructure
 - RAG knowledge layer for product catalog, pricing rules, and sales playbooks
 - Structured sales rep product review with include/exclude, quantity, term, and line-price controls
-- Architecture View that explains the live run across Human, Agent, MCP, RAG, Salesforce, CPQ, and LLMClient layers
+- Business View with compact Salesforce read context, command execution, recommended products, quote versions, order placement, and collapsed diagnostics
+- Architecture View that explains the live run across Human, Agent, MCP, RAG, Salesforce, CPQ, and LLMClient layers with collapsed trace rows by default
+- Developer View with setup/runtime grouped code-flow diagrams for Data, Integrations, LLM, RAG, Backend API, LangGraph, MCP, and Recommend Product flow
+- SQLite-backed runtime state for accounts, opportunities, quotes, orders, agent runs, and activity timeline
 - ChromaDB persistent local vector store
 - Ollama chat and embedding support
 - Deterministic fallback response mode
@@ -71,8 +74,8 @@ Layer ownership:
 - Tools = integration wrappers
 - RAG = knowledge service behind MCP
 
-Primary flow:
-User -> Frontend -> Backend -> Agent -> MCP -> Tools -> LLMClient -> Response
+Primary runtime flow:
+User -> Frontend -> Backend -> Agent -> MCP -> Tools/RAG -> LLMClient -> Response
 
 Command-center flow:
 User -> Frontend -> Account -> Opportunity -> Backend -> Agent -> MCP recommendation/pricing -> Sales rep selection -> Agent -> MCP quote creation -> Quote history -> Customer finalization -> MCP order placement -> Response
@@ -81,7 +84,10 @@ RAG flow:
 User -> Agent -> MCP.search_knowledge -> Retriever -> ChromaDB -> Context -> Agent -> LLMClient
 
 Architecture explanation flow:
-Business run data -> Frontend Architecture View -> Layer trace -> Expandable input/output payloads -> Layer contracts and decision points
+Business run data -> Frontend Architecture View -> Collapsed layer trace -> Expandable input/output payloads -> Layer contracts and run evidence
+
+Developer explanation flow:
+Implementation component -> Setup/Runtime group -> Numbered code-flow cards -> Code path snippets and layer ownership
 
 The agent does not call integrations, Chroma, Ollama, or RAG directly.
 
@@ -201,12 +207,15 @@ Agent state includes:
 
 ## 9. User Experience
 
-The frontend command center has two modes:
+The frontend app has three modes:
 
 ### Business View
 
 Business View supports:
-- Selecting an Account and then one of that account's Opportunities.
+- Selecting an Account and then one of that account's Opportunities from compact dependent dropdowns.
+- Showing Salesforce as the read/source system and Oracle CPQ as the write/target system.
+- Choosing a command from a command picker or typing command details.
+- Running the command with the Run Command button or Enter in Command details.
 - Running an AI recommendation for the selected telecom opportunity.
 - Reviewing recommended NetApp-aligned products as structured CPQ rows.
 - Including/excluding products.
@@ -217,6 +226,8 @@ Business View supports:
 - Finalizing a chosen quote and placing an order.
 - Viewing `oracle_quote_id`, `oracle_order_id`, `sf_opportunity_id`, total, discounts, products, pricing line items, run steps, retrieved knowledge, and assistant summary.
 - Loading and error states.
+- Collapsed Agent Workbench diagnostics below Recommended Products.
+- Collapsed Activity Timeline with event counts and event date/time rows.
 
 ### Architecture View
 
@@ -224,10 +235,18 @@ Architecture View supports:
 - Visual trace from sales rep command through Agent, MCP, RAG, Salesforce, CPQ, LLMClient, and quote creation.
 - Quote-version and order-placement steps after customer finalization.
 - Layer badges that make architecture ownership explicit.
-- Expandable step details showing input and output payloads.
+- Collapsed-by-default step details showing input and output payloads when expanded.
 - Layer contract panel for Agent, MCP, RAG, Tools, LLMClient, and Human approval responsibilities.
 - Decision point panel for RAG trigger, CPQ rules, discounts, and sales rep approval.
 - Live status based on the current recommendation, pricing, and quote state.
+
+### Developer View
+
+Developer View supports:
+- Grouped Setup flows: Data Layer and Runtime State, Mock Enterprise Integrations, LLM Abstraction, and RAG Retrieval.
+- Grouped Runtime flows: Backend API Boundary, LangGraph Orchestration, MCP Tool Boundary, and Recommend Product Flow.
+- Numbered code-flow cards with layer labels, concise behavior descriptions, and source-file/code-path snippets.
+- A teaching-oriented view of how the implementation maps to the platform architecture.
 
 Successful output includes:
 - Product recommendations

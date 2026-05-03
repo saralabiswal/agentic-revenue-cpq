@@ -30,9 +30,10 @@ Salesforce Opportunity -> Oracle CPQ Quote automation
 
 The project is now implemented as a local full-stack application with:
 - FastAPI backend
-- Next.js telecom quote command center frontend
-- Business View for account/opportunity selection, sales rep product review, repricing, quote versions, and order placement
+- Next.js Enterprise AI Agentic Workflow frontend
+- Business View for compact Salesforce read context, command execution, sales rep product review, repricing, quote versions, activity timeline, and order placement
 - Architecture View for explaining the live run across Human, Agent, MCP, RAG, Salesforce, CPQ, and LLMClient
+- Developer View for setup/runtime implementation code-flow diagrams
 - LangGraph agent
 - MCP execution layer
 - Salesforce/CPQ mock tools
@@ -40,6 +41,7 @@ The project is now implemented as a local full-stack application with:
 - RAG knowledge retrieval through MCP
 - Ollama chat and embeddings
 - ChromaDB persistent vector store
+- SQLite persistent business runtime state
 - Centralized logging
 - Docker Compose deployment
 
@@ -120,8 +122,9 @@ Frontend:
 - `apps/frontend/app/page.tsx`
 - Calls `/quote/recommendations`, `/quote/pricing`, and `/quote/create`
 - Calls `/accounts`, `/opportunities`, `/opportunities/{sf_opportunity_id}/quotes`, `/opportunities/{sf_opportunity_id}/activity`, and `/quote/finalize`
-- Business View with account/opportunity selectors, structured CPQ recommendation rows, selection controls, repricing, pricing summary, quote versions, and order placement
-- Architecture View with live trace, layer badges, expandable input/output payloads, layer contracts, customer finalization, order placement, and decision points
+- Business View with compact account/opportunity selectors, command picker/details field, structured CPQ recommendation rows, selection controls, repricing, pricing summary, quote versions, collapsed Agent Workbench, collapsed Activity Timeline, and order placement
+- Architecture View with live trace collapsed by default, layer badges, expandable input/output payloads, layer contracts, customer finalization, order placement, and run evidence
+- Developer View with Setup and Runtime tabs for Data, Integrations, LLM, RAG, Backend API, LangGraph, MCP, and Recommend Product code flows
 - Supporting assistant summary and RAG evidence display
 
 Agent:
@@ -157,7 +160,7 @@ Logging:
 
 ## TASK EXECUTION MODE
 
-Tasks 1-22 are complete. Post-task UI enhancements are tracked in `TASKS.md`. Phase 10 now tracks the planned live-data and first-class business flow implementation. Mark Phase 10 checklist items done as implementation progresses.
+Tasks 1-31 and post-task UI enhancements are complete. `TASKS.md` tracks the implemented live-data, command execution, Business View, Architecture View, and Developer View scope. For new work, keep the checklist current and add follow-up tasks only when behavior materially changes.
 
 For every new request:
 1. Identify whether it is a bug fix, enhancement, validation, or docs update.
@@ -182,8 +185,8 @@ Before completing any change:
 - Ensure logging remains present.
 
 Latest known validation:
-- Python tests: `77 passed`
-- Frontend build: `npm run build` passed after Architecture View update
+- Python tests: `78 passed`
+- Frontend build: `npm run build` passed after Business/Architecture/Developer View update
 - Docker build: `docker compose build backend frontend` passed
 - Live Ollama `/chat` smoke test passed before the command-center expansion
 
@@ -207,8 +210,10 @@ Latest known validation:
 3. Fetch opportunity through MCP.
 4. Recommend products through MCP.
 5. Calculate pricing through MCP.
-6. Create quote through MCP.
-7. Generate final response through `LLMClient` or fallback response.
+6. Return recommendation/pricing for sales rep review.
+7. Create quote through backend/MCP only after explicit user action.
+8. Finalize quote and place order through backend/MCP only after explicit user action.
+9. Generate final response through `LLMClient` or fallback response.
 
 ---
 
@@ -240,6 +245,14 @@ cd apps/frontend
 npm run dev
 ```
 
+Run frontend production build/server:
+
+```bash
+cd apps/frontend
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run build
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run start -- --hostname 127.0.0.1 --port 3000
+```
+
 Run tests:
 
 ```bash
@@ -260,14 +273,15 @@ Delivered:
 
 Account -> Opportunity -> AI Recommendation -> Sales Rep Selection -> Repricing -> Quote Creation -> Customer Quote Finalization -> Order Placement -> Context-aware Assistant Response
 
-Planned live-data goal:
+Implemented live-data flow:
 
 Salesforce `sf_account_id` -> Salesforce `sf_opportunity_id` -> Agent/MCP/RAG run -> Oracle `oracle_quote_id` versions -> customer finalization -> Oracle `oracle_order_id`
 
 Demo surface:
 
-Business View -> Sales workflow  
+Business View -> Sales workflow
 Architecture View -> End-to-end platform explanation
+Developer View -> Setup/runtime code-flow teaching
 
 ---
 
