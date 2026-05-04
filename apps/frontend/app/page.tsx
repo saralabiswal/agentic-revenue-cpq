@@ -226,7 +226,8 @@ type DeveloperFlowKey =
   | "mcp"
   | "integrations"
   | "data"
-  | "llm";
+  | "llm"
+  | "providers";
 
 type AgentActionState = {
   kind: AgentActionKind;
@@ -2086,6 +2087,30 @@ const DEVELOPER_FLOWS: Record<
       },
     ],
   },
+  providers: {
+    title: "Provider Profiles",
+    subtitle: "Read-only deployment profile mappings for Local, OCI, GCP, and Kubernetes.",
+    steps: [
+      {
+        layer: "Config",
+        title: "Select Profile",
+        detail: "Backend environment variables choose provider names at deployment time.",
+        code: "PLATFORM_PROFILE=local\nLLM_PROVIDER=ollama",
+      },
+      {
+        layer: "API",
+        title: "Expose Read-Only Metadata",
+        detail: "The UI reads sanitized profile display labels without credentials or connection strings.",
+        code: "GET /runtime/profile\neditable_in_ui=false",
+      },
+      {
+        layer: "Boundary",
+        title: "Keep Runtime Immutable",
+        detail: "Provider selection is not changed by frontend controls.",
+        code: "services/platform/config.py\nget_runtime_profile_payload()",
+      },
+    ],
+  },
 };
 
 const DEVELOPER_FLOW_GROUPS: {
@@ -2096,7 +2121,7 @@ const DEVELOPER_FLOW_GROUPS: {
   {
     title: "Setup",
     description: "The pieces that exist before a user clicks a workflow button.",
-    flows: ["data", "integrations", "llm", "rag"],
+    flows: ["data", "integrations", "llm", "rag", "providers"],
   },
   {
     title: "Runtime",
@@ -2180,8 +2205,11 @@ function DeveloperView({
           </div>
           <span className="trace-count">{selected.steps.length} steps</span>
         </div>
-        <CodeFlowStrip steps={selected.steps} />
-        <ProviderProfilesMatrix runtimeProfile={runtimeProfile} />
+        {activeFlow === "providers" ? (
+          <ProviderProfilesMatrix runtimeProfile={runtimeProfile} />
+        ) : (
+          <CodeFlowStrip steps={selected.steps} />
+        )}
       </section>
     </section>
   );
