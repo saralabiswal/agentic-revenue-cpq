@@ -18,6 +18,8 @@ from services.platform import PlatformConfig, get_platform_config
 
 logger = logging.getLogger(__name__)
 
+# Agent guardrail: this module may choose a workflow implementation, but it must
+# keep integration access behind MCP and model access behind LLMClient.
 
 class AgentOrchestrator(Protocol):
     """Interface for all agent workflow implementations."""
@@ -143,6 +145,8 @@ class NativeAgentOrchestrator:
         """Merge each workflow step's partial state like LangGraph does."""
         current: AgentState = dict(state)
         for step in steps:
+            # Native orchestration reuses the existing graph node functions so
+            # MCP execution, RAG access, and LLMClient usage stay identical.
             update = step(current)
             current.update(update)
         return current
@@ -204,6 +208,8 @@ def create_agent_orchestrator(
             llm_client=llm_client,
         )
     if provider in {"oci_responses_api", "vertex_agent"}:
+        # Cloud-managed agent providers are namespaced stubs for now. They do
+        # not import OCI/GCP SDKs or bypass the AgentOrchestrator contract.
         return ProviderManagedAgentOrchestrator(provider)
 
     raise ValueError(

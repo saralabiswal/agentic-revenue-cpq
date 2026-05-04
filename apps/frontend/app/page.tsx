@@ -429,6 +429,8 @@ export default function Home() {
     setError(null);
     try {
       const [profileResponse, accountResponse] = await Promise.all([
+        // Read provider metadata once for documentation panels. The UI never
+        // mutates runtime provider selection.
         getJson<RuntimeProfile>("/runtime/profile"),
         getJson<{ accounts: Account[] }>("/accounts"),
       ]);
@@ -2206,6 +2208,8 @@ function DeveloperView({
           <span className="trace-count">{selected.steps.length} steps</span>
         </div>
         {activeFlow === "providers" ? (
+          // Provider Profiles is a Setup topic, not a persistent footer across
+          // every Developer View flow.
           <ProviderProfilesMatrix runtimeProfile={runtimeProfile} />
         ) : (
           <CodeFlowStrip steps={selected.steps} />
@@ -2223,6 +2227,8 @@ function ProviderProfilesMatrix({
 }) {
   const profiles = runtimeProfile?.profiles ?? {};
   const profileKeys = ["local", "oci", "gcp", "generic-kubernetes"];
+  // The matrix is documentation sourced from /runtime/profile. It deliberately
+  // shows display labels only, never raw deployment variables with secrets.
   const rows: Array<[string, keyof RuntimeProfileSummary]> = [
     ["Agent orchestration", "agent_orchestration"],
     ["LLM", "llm"],

@@ -25,6 +25,8 @@ class _SQLiteRepositoryProxy:
 
 sqlite_repositories = _SQLiteRepositoryProxy()
 
+# Business store guardrail: cross-system identifiers remain source-prefixed in
+# this boundary and API payloads: sf_* for Salesforce, oracle_* for Oracle CPQ.
 
 class BusinessStore(Protocol):
     """Interface for account, opportunity, quote, order, activity, and run persistence."""
@@ -319,6 +321,8 @@ def create_business_store(config: PlatformConfig | None = None) -> BusinessStore
         "alloydb",
         "postgres",
     }:
+        # Cloud business stores are explicit stubs until adapter tasks add SDKs
+        # or database drivers without changing repository call sites.
         return ProviderBusinessStore(provider)
 
     raise ValueError(

@@ -163,6 +163,8 @@ def create_vector_store(config: PlatformConfig | None = None) -> VectorStore:
         "opensearch",
         "alloydb_vector",
     }:
+        # RAG code depends on VectorStore only. Provider-specific clients must
+        # stay inside future adapter implementations behind this factory.
         return ProviderVectorStore(provider)
 
     raise ValueError(

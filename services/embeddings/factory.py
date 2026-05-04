@@ -41,6 +41,8 @@ def create_embedding_client(config: PlatformConfig | None = None) -> EmbeddingCl
     if provider == "ollama":
         return OllamaEmbeddingClient()
     if provider in {"oci_genai", "vertex_ai"}:
+        # Cloud embedding providers are intentionally stubs here; adding real
+        # SDK clients belongs inside provider adapters, not RAG call sites.
         return ProviderEmbeddingClient(provider)
 
     raise ValueError(

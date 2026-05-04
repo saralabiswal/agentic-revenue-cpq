@@ -86,6 +86,8 @@ def health() -> dict[str, str]:
 def runtime_profile() -> RuntimeProfileResponse:
     """Return read-only runtime provider profile metadata for UI display."""
     logger.info("Runtime profile requested")
+    # This endpoint is intentionally informational. Provider selection stays in
+    # backend deployment config and this response never includes secrets or URLs.
     return RuntimeProfileResponse(**get_runtime_profile_payload())
 
 

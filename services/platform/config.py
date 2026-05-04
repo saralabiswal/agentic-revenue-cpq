@@ -21,6 +21,8 @@ LOCAL_PROVIDER_DEFAULTS = {
     "observability_provider": "python_logging",
 }
 
+# Profile defaults are provider names, not SDK clients. Factories decide what to
+# instantiate, and cloud values remain harmless stubs until explicitly built.
 PROFILE_PROVIDER_DEFAULTS = {
     "local": LOCAL_PROVIDER_DEFAULTS,
     "oci": {
@@ -182,6 +184,8 @@ def get_platform_config() -> PlatformConfig:
         )
 
     defaults = PROFILE_PROVIDER_DEFAULTS[profile]
+    # Explicit environment variables override profile defaults. This lets
+    # deterministic tests choose fallback while the local profile defaults to Ollama.
     return PlatformConfig(
         platform_profile=profile,
         agent_orchestrator=_provider_value("AGENT_ORCHESTRATOR", defaults),
@@ -229,6 +233,8 @@ def _active_profile_summary(config: PlatformConfig) -> dict[str, str]:
     """Return display labels for the currently selected provider values."""
     profile_summary = dict(PROFILE_DISPLAY_SUMMARIES[config.platform_profile])
     if config.platform_profile != "local":
+        # Cloud profiles are display-only today, so show target architecture
+        # mappings instead of pretending live SDK integrations exist.
         return profile_summary
 
     profile_summary.update(

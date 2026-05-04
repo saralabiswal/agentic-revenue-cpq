@@ -66,6 +66,8 @@ def create_secrets_provider(config: PlatformConfig | None = None) -> SecretsProv
     if provider == "env":
         return EnvSecretsProvider()
     if provider in {"oci_vault", "gcp_secret_manager"}:
+        # Do not import cloud SDKs in the local profile. Real vault adapters can
+        # be added later behind this SecretsProvider contract.
         return ProviderSecretsProvider(provider)
 
     raise ValueError(

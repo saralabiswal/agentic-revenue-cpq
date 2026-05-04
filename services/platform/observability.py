@@ -85,6 +85,8 @@ def create_observability_provider(
     if provider == "python_logging":
         return PythonLoggingObservabilityProvider()
     if provider in {"oci_logging", "gcp_logging", "opentelemetry"}:
+        # Observability stays behind this provider boundary so local logging and
+        # future cloud telemetry do not leak into business or agent code.
         return ProviderObservabilityProvider(provider)
 
     raise ValueError(

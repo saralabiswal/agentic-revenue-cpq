@@ -120,6 +120,8 @@ def create_object_store(config: PlatformConfig | None = None) -> ObjectStore:
     if provider == "local_fs":
         return LocalFilesystemObjectStore()
     if provider in {"oci_object_storage", "gcs", "s3_compatible"}:
+        # Object storage provider names are accepted for profile visibility, but
+        # cloud SDK integrations are not part of the local runtime yet.
         return ProviderObjectStore(provider)
 
     raise ValueError(
