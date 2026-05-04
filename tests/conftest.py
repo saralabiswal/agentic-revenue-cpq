@@ -14,4 +14,6 @@ def reset_mock_business_data(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("BUSINESS_DB_PATH", str(tmp_path / "business.sqlite3"))
     reset_business_data()
     yield
+    monkeypatch.setenv("PLATFORM_PROFILE", "local")
+    monkeypatch.setenv("BUSINESS_STORE_PROVIDER", "sqlite")
     reset_business_data()

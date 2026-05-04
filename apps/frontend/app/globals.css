@@ -377,6 +377,36 @@ textarea:disabled {
   overflow-wrap: anywhere;
 }
 
+.runtime-profile-badge {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #d4dee8;
+  border-radius: 8px;
+  background: #d4dee8;
+}
+
+.runtime-profile-badge div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  background: #ffffff;
+  padding: 7px 8px;
+}
+
+.runtime-profile-badge span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.runtime-profile-badge strong {
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -1429,6 +1459,31 @@ textarea:disabled {
   line-height: 1.35;
 }
 
+.deployment-profile-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.deployment-profile-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.deployment-profile-grid div {
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.deployment-profile-grid div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .developer-workspace {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -1494,6 +1549,51 @@ textarea:disabled {
   display: grid;
   align-content: start;
   min-width: 0;
+}
+
+.provider-profiles-section {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--line);
+  padding: 18px;
+}
+
+.provider-profile-table {
+  display: grid;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.provider-profile-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.75fr) repeat(4, minmax(170px, 1fr));
+  min-width: 880px;
+  border-top: 1px solid var(--line);
+}
+
+.provider-profile-row:first-child {
+  border-top: 0;
+}
+
+.provider-profile-row > * {
+  margin: 0;
+  border-left: 1px solid var(--line);
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.provider-profile-row > *:first-child {
+  border-left: 0;
+}
+
+.provider-profile-row.header {
+  background: #f5f8fb;
+}
+
+.provider-profile-row.header strong {
+  font-size: 12px;
 }
 
 .developer-stage {

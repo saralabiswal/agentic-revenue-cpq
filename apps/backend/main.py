@@ -25,13 +25,9 @@ from schemas import (
     QuoteHistoryResponse,
     RecommendationRequest,
     RecommendationResponse,
+    RuntimeProfileResponse,
 )
-from services.agent import (
-    build_agent_graph,
-    build_pricing_graph,
-    build_quote_creation_graph,
-    build_recommendation_graph,
-)
+from services.agent import create_agent_orchestrator
 from services.data import (
     get_agent_run,
     get_order,
@@ -41,13 +37,14 @@ from services.data import (
 )
 from services.llm import create_llm_client
 from services.mcp.factory import create_default_mcp_engine
+from services.platform import get_runtime_profile_payload
 
 
 # Backend request flow:
 # 1. The Next.js frontend calls these FastAPI routes.
 # 2. Simple read routes execute named MCP tools directly.
-# 3. Agentic routes build graph state and invoke a LangGraph workflow.
-# 4. LangGraph nodes call MCP tools for Salesforce, CPQ, RAG, and data actions.
+# 3. Agentic routes build state and invoke an AgentOrchestrator workflow.
+# 4. AgentOrchestrator calls MCP tools for Salesforce, CPQ, RAG, and data actions.
 # 5. The backend records audit/activity details and returns typed API responses.
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -83,6 +80,13 @@ def health() -> dict[str, str]:
     """Return a lightweight backend health response."""
     logger.info("Health check requested")
     return {"status": "ok"}
+
+
+@app.get("/runtime/profile", response_model=RuntimeProfileResponse)
+def runtime_profile() -> RuntimeProfileResponse:
+    """Return read-only runtime provider profile metadata for UI display."""
+    logger.info("Runtime profile requested")
+    return RuntimeProfileResponse(**get_runtime_profile_payload())
 
 
 @app.get("/accounts", response_model=AccountListResponse)
@@ -182,7 +186,7 @@ def list_activity_records(sf_opportunity_id: str) -> ActivityListResponse:
 
 # ---------------------------------------------------------------------------
 # Agentic opportunity-to-quote APIs.
-# These routes build the initial graph state. The graph then owns the ordered
+# These routes build the initial agent state. The orchestrator then owns the ordered
 # workflow: analyze input, retrieve context, call tools, and build responses.
 # ---------------------------------------------------------------------------
 
@@ -208,8 +212,10 @@ def chat(request: ChatRequest) -> ChatResponse:
         state["sf_opportunity_id"] = request.sf_opportunity_id
 
     try:
-        # Full graph: opportunity -> recommendation -> pricing -> quote -> response.
-        result = build_agent_graph(llm_client=create_llm_client()).invoke(state)
+        # Full workflow: opportunity -> recommendation -> pricing -> quote -> response.
+        result = create_agent_orchestrator(
+            llm_client=create_llm_client(),
+        ).run_chat(state)
     except Exception as exc:
         logger.exception(
             "Chat request failed: has_sf_opportunity_id=%s",
@@ -252,8 +258,10 @@ def recommend_quote(request: RecommendationRequest) -> RecommendationResponse:
     }
 
     try:
-        # Recommendation graph stops before quote creation so the user can review products.
-        result = build_recommendation_graph(llm_client=create_llm_client()).invoke(state)
+        # Recommendation workflow stops before quote creation so the user can review products.
+        result = create_agent_orchestrator(
+            llm_client=create_llm_client(),
+        ).run_recommendation(state)
     except Exception as exc:
         logger.exception(
             "Recommendation request failed: sf_opportunity_id=%s",
@@ -290,14 +298,14 @@ def price_quote(request: PricingRequest) -> PricingResponse:
     state = {
         "sf_opportunity_id": request.sf_opportunity_id,
         "currency": request.currency,
-        # Pydantic models are converted into plain dictionaries because graph
+        # Pydantic models are converted into plain dictionaries because agent
         # nodes and MCP tools pass JSON-like state between layers.
         "selected_products": [product.model_dump() for product in request.products],
     }
 
     try:
-        # Pricing graph reuses the same CPQ pricing tool without recommendation.
-        result = build_pricing_graph().invoke(state)
+        # Pricing workflow reuses the same CPQ pricing tool without recommendation.
+        result = create_agent_orchestrator().run_pricing(state)
     except Exception as exc:
         logger.exception(
             "Pricing request failed: sf_opportunity_id=%s",
@@ -344,14 +352,16 @@ def create_quote_from_selection(request: QuoteCreateRequest) -> QuoteCreateRespo
         "sf_opportunity_id": request.sf_opportunity_id,
         "currency": request.currency,
         "selected_products": [product.model_dump() for product in request.products],
-        # This flag tells the quote graph to persist the CPQ quote in SQLite
+        # This flag tells the quote workflow to persist the CPQ quote in SQLite
         # instead of returning only a transient draft response.
         "persist_quote": True,
     }
 
     try:
-        # Quote creation graph: selected products -> pricing -> create quote -> response.
-        result = build_quote_creation_graph(llm_client=create_llm_client()).invoke(state)
+        # Quote creation workflow: selected products -> pricing -> create quote -> response.
+        result = create_agent_orchestrator(
+            llm_client=create_llm_client(),
+        ).run_quote_creation(state)
     except Exception as exc:
         logger.exception(
             "Quote creation request failed: sf_opportunity_id=%s",

@@ -3,11 +3,18 @@
 Author: Sarala Biswal
 """
 
+import pytest
 from fastapi.testclient import TestClient
 
 from apps.backend.main import app
 from services.llm import create_llm_client
 from services.llm import OllamaClient
+
+
+@pytest.fixture(autouse=True)
+def use_deterministic_llm_for_backend_endpoint_tests(monkeypatch) -> None:
+    """Keep endpoint tests on the explicit deterministic fallback provider."""
+    monkeypatch.setenv("LLM_PROVIDER", "fallback")
 
 
 def test_chat_endpoint_creates_quote_from_message() -> None:
@@ -76,9 +83,21 @@ def test_chat_endpoint_returns_400_for_unknown_opportunity() -> None:
     assert response.status_code == 400
 
 
-def test_backend_uses_fallback_response_by_default(monkeypatch) -> None:
-    """Verify backend uses fallback response by default behavior."""
+def test_backend_uses_ollama_llm_provider_by_default(monkeypatch) -> None:
+    """Verify local default behavior uses the Ollama LLM provider."""
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama.test")
+
+    llm_client = create_llm_client()
+
+    assert isinstance(llm_client, OllamaClient)
+    assert llm_client.base_url == "http://ollama.test"
+    llm_client.close()
+
+
+def test_backend_can_enable_fallback_llm_provider(monkeypatch) -> None:
+    """Verify deterministic fallback mode remains available by configuration."""
+    monkeypatch.setenv("LLM_PROVIDER", "fallback")
 
     assert create_llm_client() is None
 

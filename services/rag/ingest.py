@@ -6,8 +6,8 @@ Author: Sarala Biswal
 import logging
 from dataclasses import dataclass
 
-from services.rag.embeddings import EmbeddingClient
-from services.rag.vector_store import VectorStore
+from services.embeddings import EmbeddingClient, create_embedding_client
+from services.rag.vector_store import VectorStore, create_vector_store
 
 
 logger = logging.getLogger(__name__)
@@ -84,8 +84,8 @@ def ingest_sample_documents(
 ) -> int:
     """Embed and store sample product, pricing, and playbook documents."""
     # Dependency injection keeps tests fast and avoids requiring live Ollama/Chroma.
-    client = embedding_client or EmbeddingClient()
-    store = vector_store or VectorStore()
+    client = embedding_client or create_embedding_client()
+    store = vector_store or create_vector_store()
     # IDs must stay stable so repeated ingestion upserts the same logical documents.
     ids = [document.id for document in SAMPLE_DOCUMENTS]
     documents = [document.text for document in SAMPLE_DOCUMENTS]

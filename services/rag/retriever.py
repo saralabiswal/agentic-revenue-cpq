@@ -5,8 +5,8 @@ Author: Sarala Biswal
 
 import logging
 
-from services.rag.embeddings import EmbeddingClient
-from services.rag.vector_store import VectorStore
+from services.embeddings import EmbeddingClient, create_embedding_client
+from services.rag.vector_store import VectorStore, create_vector_store
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ class Retriever:
         vector_store: VectorStore | None = None,
     ) -> None:
         """Create a retriever with injectable embedding and vector-store clients."""
-        self._embedding_client = embedding_client or EmbeddingClient()
-        self._vector_store = vector_store or VectorStore()
+        self._embedding_client = embedding_client or create_embedding_client()
+        self._vector_store = vector_store or create_vector_store()
 
     def retrieve(self, query: str, k: int = 3) -> list[str]:
         """Embed a query and return the top matching knowledge snippets."""

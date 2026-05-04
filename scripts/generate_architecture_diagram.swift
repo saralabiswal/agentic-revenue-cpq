@@ -1,8 +1,8 @@
+#!/usr/bin/env swift
+
 // Swift script that renders the README architecture diagram asset.
 //
 // Author: Sarala Biswal
-
-#!/usr/bin/env swift
 
 import AppKit
 import Foundation
@@ -201,7 +201,7 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "A governed agentic command center between Salesforce CRM and Oracle CPQ, with LangGraph planning, LLM reasoning, MCP execution, and full traceability.",
+    "A governed agentic command center with a stable FastAPI + AgentOrchestrator + MCP core and swappable Local, OCI, and GCP provider profiles.",
     in: NSRect(x: 220, y: 1004, width: 1360, height: 28),
     size: 18,
     weight: .regular,
@@ -218,8 +218,8 @@ let mcpPanel = NSRect(x: 80, y: 130, width: 1640, height: 390)
 
 drawSoftPanel(
     platformPanel,
-    title: "Agentic Orchestration App",
-    subtitle: "User experience, API state, agent planning, and grounded responses live here.",
+    title: "Cloud-Agnostic Orchestration App",
+    subtitle: "The application core stays stable while provider profiles choose local, OCI, GCP, or Kubernetes infrastructure.",
     stroke: color(0xcad5e5),
     labelColor: color(0x1c3556)
 )
@@ -251,23 +251,23 @@ let backend = Card(
     rect: NSRect(x: 780, y: 660, width: 300, height: 170),
     eyebrow: "API + DATA",
     title: "FastAPI Backend",
-    lines: ["REST API", "SQLite business data", "Agent run history"],
+    lines: ["REST API", "Provider config", "BusinessStore boundary"],
     fill: color(0xffffff),
     stroke: color(0x78c6ad)
 )
 let agent = Card(
     rect: NSRect(x: 1150, y: 660, width: 300, height: 170),
     eyebrow: "ORCHESTRATION",
-    title: "LangGraph Agent",
-    lines: ["Analyze intent", "Retrieve context", "Plan next action"],
+    title: "AgentOrchestrator",
+    lines: ["LangGraph local/demo", "Native Python option", "MCP-only tool calls"],
     fill: color(0xffffff),
     stroke: color(0x78c6ad)
 )
 let llm = Card(
-    rect: NSRect(x: 1150, y: 520, width: 300, height: 128),
+    rect: NSRect(x: 1150, y: 480, width: 300, height: 168),
     eyebrow: "REASONING",
     title: "LLMClient",
-    lines: ["Ollama or fallback", "Grounded response only"],
+    lines: ["Ollama local", "OCI GenAI / Vertex AI stubs", "Fallback explicit"],
     fill: color(0xffffff),
     stroke: color(0xb8a8ed)
 )
@@ -291,7 +291,7 @@ let rag = Card(
     rect: NSRect(x: 735, y: 140, width: 330, height: 165),
     eyebrow: "KNOWLEDGE SYSTEM",
     title: "RAG Service",
-    lines: ["Ollama embeddings", "ChromaDB knowledge", "Search context"],
+    lines: ["EmbeddingClient", "VectorStore provider", "MCP search_knowledge"],
     fill: color(0xf8f6ff),
     stroke: color(0xb8a8ed)
 )
@@ -351,6 +351,13 @@ for card in [salesRep, workbench, backend, agent, llm, router, salesforce, rag, 
     drawCard(card)
 }
 
+// Provider mappings are display/documentation only; the agent still uses
+// AgentOrchestrator -> MCP -> tools/RAG and LLMClient for reasoning.
+drawPill("Local: Ollama + ChromaDB + SQLite", rect: NSRect(x: 125, y: 92, width: 370, height: 34), fill: color(0xffffff), stroke: color(0x9eb0c6))
+drawPill("OCI: GenAI + DB 23ai + Autonomous DB", rect: NSRect(x: 535, y: 92, width: 395, height: 34), fill: color(0xffffff), stroke: color(0xd29a4a))
+drawPill("GCP: Gemini + Vector Search + Cloud SQL", rect: NSRect(x: 970, y: 92, width: 405, height: 34), fill: color(0xffffff), stroke: color(0x6da8df))
+drawPill("K8s: OpenAI + pgvector + PostgreSQL", rect: NSRect(x: 1415, y: 92, width: 360, height: 34), fill: color(0xffffff), stroke: color(0x77b693))
+
 drawDot(NSPoint(x: 360, y: salesRep.rect.midY), fill: color(0x496d95), text: "1")
 drawDot(NSPoint(x: 740, y: backend.rect.midY), fill: color(0x2f8c70), text: "2")
 drawDot(NSPoint(x: 1115, y: agent.rect.midY), fill: color(0x2f8c70), text: "3")
@@ -358,14 +365,14 @@ drawDot(NSPoint(x: router.rect.midX, y: 485), fill: color(0xb57918), text: "4")
 
 drawText(
     "Business flow: Salesforce Account -> Salesforce Opportunity -> Agent Recommendation -> Oracle CPQ Quote -> Oracle CPQ Order",
-    in: NSRect(x: 150, y: 80, width: 1500, height: 30),
+    in: NSRect(x: 150, y: 50, width: 1500, height: 30),
     size: 18,
     weight: .semibold,
     color: color(0x27364a)
 )
 drawText(
     "Ownership rule: Salesforce owns account and opportunity IDs. Oracle CPQ owns quote and order IDs. The platform owns orchestration state and execution trace.",
-    in: NSRect(x: 170, y: 48, width: 1460, height: 24),
+    in: NSRect(x: 170, y: 20, width: 1460, height: 24),
     size: 15,
     weight: .medium,
     color: color(0x647086)

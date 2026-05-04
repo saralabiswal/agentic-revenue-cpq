@@ -3,9 +3,16 @@
 Author: Sarala Biswal
 """
 
+import pytest
 from fastapi.testclient import TestClient
 
 from apps.backend.main import app
+
+
+@pytest.fixture(autouse=True)
+def use_deterministic_llm_for_integration_tests(monkeypatch) -> None:
+    """Keep this integration assertion on the explicit deterministic provider."""
+    monkeypatch.setenv("LLM_PROVIDER", "fallback")
 
 
 def test_opportunity_to_quote_integration_flow() -> None:

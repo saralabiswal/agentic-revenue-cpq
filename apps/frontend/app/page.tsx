@@ -181,6 +181,34 @@ type CommandSource = "auto" | "manual";
 
 type ViewMode = "business" | "architecture" | "developer";
 
+type RuntimeProfileSummary = {
+  runtime_profile: string;
+  agent_orchestration: string;
+  llm: string;
+  embeddings: string;
+  vector_store: string;
+  business_store: string;
+  object_store: string;
+  secrets: string;
+  observability: string;
+};
+
+type RuntimeProfile = {
+  platform_profile: string;
+  display_name: string;
+  agent_orchestrator: string;
+  llm_provider: string;
+  embedding_provider: string;
+  vector_store_provider: string;
+  business_store_provider: string;
+  object_store_provider: string;
+  secrets_provider: string;
+  observability_provider: string;
+  editable_in_ui: false;
+  summary: RuntimeProfileSummary;
+  profiles: Record<string, RuntimeProfileSummary>;
+};
+
 type SuggestedCommand = {
   text: string;
   intent: CommandIntent;
@@ -284,6 +312,7 @@ export default function Home() {
   const [latestQuote, setLatestQuote] = useState<QuoteRecord | null>(null);
   const [order, setOrder] = useState<OrderRecord | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [runtimeProfile, setRuntimeProfile] = useState<RuntimeProfile | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("business");
   const [developerFlow, setDeveloperFlow] = useState<DeveloperFlowKey>("data");
   const [status, setStatus] = useState<
@@ -398,7 +427,11 @@ export default function Home() {
     setStatus("loading");
     setError(null);
     try {
-      const accountResponse = await getJson<{ accounts: Account[] }>("/accounts");
+      const [profileResponse, accountResponse] = await Promise.all([
+        getJson<RuntimeProfile>("/runtime/profile"),
+        getJson<{ accounts: Account[] }>("/accounts"),
+      ]);
+      setRuntimeProfile(profileResponse);
       setAccounts(accountResponse.accounts);
       const firstAccount = accountResponse.accounts[0];
       if (firstAccount) {
@@ -730,6 +763,7 @@ export default function Home() {
                 </strong>
               </div>
             </div>
+            {viewMode !== "business" ? <RuntimeProfileBadge profile={runtimeProfile} /> : null}
           </div>
         </header>
 
@@ -1026,16 +1060,46 @@ export default function Home() {
             actionKind={architectureAction?.kind ?? "ready"}
             activity={activity}
             pricing={pricing}
+            runtimeProfile={runtimeProfile}
             quotes={quotes}
             retrievedContext={retrievedContext}
             runSteps={runSteps}
             steps={traceSteps}
           />
         ) : (
-          <DeveloperView activeFlow={developerFlow} onSelectFlow={setDeveloperFlow} />
+          <DeveloperView
+            activeFlow={developerFlow}
+            onSelectFlow={setDeveloperFlow}
+            runtimeProfile={runtimeProfile}
+          />
         )}
       </main>
     </div>
+  );
+}
+
+/** Render a compact read-only runtime provider badge outside the sales workflow. */
+function RuntimeProfileBadge({ profile }: { profile: RuntimeProfile | null }) {
+  const summary = profile?.summary;
+  return (
+    <section className="runtime-profile-badge" aria-label="Runtime provider profile">
+      <div>
+        <span>Runtime profile</span>
+        <strong>{summary?.runtime_profile ?? "Loading"}</strong>
+      </div>
+      <div>
+        <span>LLM</span>
+        <strong>{summary?.llm ?? "-"}</strong>
+      </div>
+      <div>
+        <span>Vector</span>
+        <strong>{summary?.vector_store ?? "-"}</strong>
+      </div>
+      <div>
+        <span>Store</span>
+        <strong>{summary?.business_store ?? "-"}</strong>
+      </div>
+    </section>
   );
 }
 
@@ -1535,6 +1599,7 @@ function ArchitectureView({
   actionKind,
   activity,
   pricing,
+  runtimeProfile,
   quotes,
   retrievedContext,
   runSteps,
@@ -1543,6 +1608,7 @@ function ArchitectureView({
   actionKind: ArchitectureActionKind;
   activity: ActivityEvent[];
   pricing: Pricing | null;
+  runtimeProfile: RuntimeProfile | null;
   quotes: QuoteRecord[];
   retrievedContext: string[];
   runSteps: RunStep[];
@@ -1584,6 +1650,7 @@ function ArchitectureView({
       </div>
 
       <aside className="architecture-aside">
+        <DeploymentProfilePanel profile={runtimeProfile} />
         <section>
           <h2>Layer Contracts</h2>
           <div className="contract-list">
@@ -1607,6 +1674,31 @@ function ArchitectureView({
           </div>
         </section>
       </aside>
+    </section>
+  );
+}
+
+/** Render read-only backend deployment provider metadata in Architecture View. */
+function DeploymentProfilePanel({ profile }: { profile: RuntimeProfile | null }) {
+  const summary = profile?.summary;
+  return (
+    <section className="deployment-profile-panel">
+      <h2>Deployment Profile</h2>
+      <p>
+        Provider selection is controlled by backend deployment configuration. This UI is read-only.
+      </p>
+      <div className="deployment-profile-grid">
+        <ContractItem label="Active runtime profile" value={summary?.runtime_profile ?? "Loading"} />
+        <ContractItem label="Agent orchestration" value={summary?.agent_orchestration ?? "-"} />
+        <ContractItem label="MCP execution boundary" value="MCPExecutionEngine and registered tool names" />
+        <ContractItem label="LLM provider" value={summary?.llm ?? "-"} />
+        <ContractItem label="Embedding provider" value={summary?.embeddings ?? "-"} />
+        <ContractItem label="RAG / vector store" value={summary?.vector_store ?? "-"} />
+        <ContractItem label="Business store" value={summary?.business_store ?? "-"} />
+        <ContractItem label="Object store" value={summary?.object_store ?? "-"} />
+        <ContractItem label="Secrets provider" value={summary?.secrets ?? "-"} />
+        <ContractItem label="Observability provider" value={summary?.observability ?? "-"} />
+      </div>
     </section>
   );
 }
@@ -2046,9 +2138,11 @@ function ArchitectureCodeFlow({ actionKind }: { actionKind: ArchitectureActionKi
 function DeveloperView({
   activeFlow,
   onSelectFlow,
+  runtimeProfile,
 }: {
   activeFlow: DeveloperFlowKey;
   onSelectFlow: (flow: DeveloperFlowKey) => void;
+  runtimeProfile: RuntimeProfile | null;
 }) {
   const selected = DEVELOPER_FLOWS[activeFlow];
   const activeGroup = DEVELOPER_FLOW_GROUPS.find((group) => group.flows.includes(activeFlow));
@@ -2087,7 +2181,62 @@ function DeveloperView({
           <span className="trace-count">{selected.steps.length} steps</span>
         </div>
         <CodeFlowStrip steps={selected.steps} />
+        <ProviderProfilesMatrix runtimeProfile={runtimeProfile} />
       </section>
+    </section>
+  );
+}
+
+/** Render provider profile comparison documentation for Developer View. */
+function ProviderProfilesMatrix({
+  runtimeProfile,
+}: {
+  runtimeProfile: RuntimeProfile | null;
+}) {
+  const profiles = runtimeProfile?.profiles ?? {};
+  const profileKeys = ["local", "oci", "gcp", "generic-kubernetes"];
+  const rows: Array<[string, keyof RuntimeProfileSummary]> = [
+    ["Agent orchestration", "agent_orchestration"],
+    ["LLM", "llm"],
+    ["Embeddings", "embeddings"],
+    ["Vector store", "vector_store"],
+    ["Business store", "business_store"],
+    ["Object store", "object_store"],
+    ["Secrets", "secrets"],
+    ["Observability", "observability"],
+  ];
+
+  return (
+    <section className="provider-profiles-section">
+      <div className="section-header compact">
+        <div>
+          <h2>Provider Profiles</h2>
+          <p>Read-only comparison of deployment profile mappings.</p>
+        </div>
+        <span className="trace-count">
+          Active: {runtimeProfile?.display_name ?? "Loading"}
+        </span>
+      </div>
+      <div className="provider-profile-table" role="table" aria-label="Provider profile comparison">
+        <div className="provider-profile-row header" role="row">
+          <strong role="columnheader">Capability</strong>
+          {profileKeys.map((profileKey) => (
+            <strong role="columnheader" key={profileKey}>
+              {profiles[profileKey]?.runtime_profile ?? formatProfileKey(profileKey)}
+            </strong>
+          ))}
+        </div>
+        {rows.map(([label, key]) => (
+          <div className="provider-profile-row" role="row" key={key}>
+            <span role="cell">{label}</span>
+            {profileKeys.map((profileKey) => (
+              <p role="cell" key={`${profileKey}-${key}`}>
+                {profiles[profileKey]?.[key] ?? "-"}
+              </p>
+            ))}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -3344,6 +3493,18 @@ function formatStatusLabel(value?: string) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+/** Format provider profile keys for loading or fallback display. */
+function formatProfileKey(profileKey: string) {
+  if (profileKey === "generic-kubernetes") {
+    return "Generic Kubernetes";
+  }
+  if (profileKey === "gcp" || profileKey === "oci") {
+    return profileKey.toUpperCase();
+  }
+
+  return profileKey.charAt(0).toUpperCase() + profileKey.slice(1);
 }
 
 /** Normalize unknown caught values into a displayable error message. */
