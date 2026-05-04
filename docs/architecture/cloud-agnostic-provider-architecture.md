@@ -1,5 +1,7 @@
 # Cloud-Agnostic Provider Architecture
 
+Author: Sarala Biswal
+
 ## Logical Architecture
 
 The platform keeps one core business workflow and swaps infrastructure through provider interfaces:

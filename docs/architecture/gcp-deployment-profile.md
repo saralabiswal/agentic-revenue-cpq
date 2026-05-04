@@ -1,5 +1,7 @@
 # GCP Deployment Profile
 
+Author: Sarala Biswal
+
 ## Purpose
 
 The GCP profile describes how the cloud-agnostic platform can run on Google Cloud without making GCP a dependency of the local profile. The current local Docker Compose application remains the default working profile.

@@ -1,3 +1,5 @@
+# Author: Sarala Biswal
+
 .venv/
 .uv-cache/
 __pycache__/

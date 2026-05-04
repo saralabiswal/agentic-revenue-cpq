@@ -1,5 +1,7 @@
 # OCI Deployment Profile
 
+Author: Sarala Biswal
+
 ## Purpose
 
 The OCI profile describes how the cloud-agnostic platform can run on Oracle Cloud Infrastructure without making OCI a dependency of the local profile. The current local Docker Compose application remains the default working profile.
