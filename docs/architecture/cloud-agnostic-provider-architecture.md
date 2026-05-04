@@ -4,6 +4,10 @@ Author: Sarala Biswal
 
 ## Logical Architecture
 
+![Cloud-agnostic logical architecture](../assets/logical-architecture.png)
+
+For deployable runtime components, see the [physical architecture diagram](physical-architecture-diagram.md).
+
 The platform keeps one core business workflow and swaps infrastructure through provider interfaces:
 
 ```text
