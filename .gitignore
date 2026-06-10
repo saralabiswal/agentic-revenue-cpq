@@ -4,6 +4,7 @@
 .uv-cache/
 __pycache__/
 .pytest_cache/
+.DS_Store
 chroma_db/
 app_data/
 
