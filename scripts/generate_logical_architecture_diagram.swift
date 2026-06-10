@@ -191,14 +191,14 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "A stable application core: AgentOrchestrator controls workflow, MCP controls execution, RAG stays behind search_knowledge, and LLM reasoning stays behind LLMClient.",
+    "A stable application core: AgentOrchestrator controls workflow, internal MCP controls execution, official MCP stdio exposes read-only tools, and RAG stays behind search_knowledge.",
     in: NSRect(x: 170, y: 1064, width: 1460, height: 28),
     size: 18,
     weight: .regular,
     color: color(0x526179)
 )
 
-drawPill("No direct agent imports of integrations, vector stores, or cloud SDKs", rect: NSRect(x: 490, y: 1010, width: 820, height: 38), fill: color(0xeaf8f6), stroke: color(0x87c9bd))
+drawPill("No direct agent imports of integrations, vector stores, cloud SDKs, or official MCP transport code", rect: NSRect(x: 390, y: 1010, width: 1020, height: 38), fill: color(0xeaf8f6), stroke: color(0x87c9bd))
 
 let appPanel = NSRect(x: 70, y: 585, width: 1660, height: 380)
 let providerPanel = NSRect(x: 70, y: 100, width: 1660, height: 430)
@@ -249,11 +249,19 @@ let orchestrator = Box(
     stroke: color(0x76bea8)
 )
 let mcp = Box(
-    rect: NSRect(x: 1240, y: 700, width: 280, height: 165),
+    rect: NSRect(x: 1215, y: 700, width: 255, height: 165),
     eyebrow: "EXECUTION",
-    title: "MCP Boundary",
-    lines: ["Registered tools", "Payload validation", "Auditable outputs"],
+    title: "Internal MCP",
+    lines: ["Registered tools", "Payload validation", "Tool traces"],
     fill: color(0xfffbf1),
+    stroke: color(0xe3b45d)
+)
+let mcpClient = Box(
+    rect: NSRect(x: 1510, y: 700, width: 185, height: 165),
+    eyebrow: "CLIENT",
+    title: "MCP Client",
+    lines: ["Inspector", "IDE", "Claude"],
+    fill: color(0xffffff),
     stroke: color(0xe3b45d)
 )
 
@@ -264,6 +272,14 @@ let llm = Box(
     lines: ["Ollama local, cloud stubs"],
     fill: color(0xf7f4ff),
     stroke: color(0xb7a8ee)
+)
+let officialMcp = Box(
+    rect: NSRect(x: 1215, y: 560, width: 280, height: 125),
+    eyebrow: "OFFICIAL MCP",
+    title: "Stdio Server",
+    lines: ["FastMCP adapter", "Contracts, policy, audit"],
+    fill: color(0xfffbf1),
+    stroke: color(0xe3b45d)
 )
 let tools = Box(
     rect: NSRect(x: 235, y: 270, width: 275, height: 170),
@@ -302,8 +318,10 @@ drawArrow(points: [NSPoint(x: user.rect.maxX - 6, y: user.rect.midY), NSPoint(x:
 drawArrow(points: [NSPoint(x: frontend.rect.maxX - 6, y: frontend.rect.midY), NSPoint(x: api.rect.minX + 6, y: api.rect.midY)])
 drawArrow(points: [NSPoint(x: api.rect.maxX - 6, y: api.rect.midY), NSPoint(x: orchestrator.rect.minX + 6, y: orchestrator.rect.midY)])
 drawArrow(points: [NSPoint(x: orchestrator.rect.maxX - 6, y: orchestrator.rect.midY), NSPoint(x: mcp.rect.minX + 6, y: mcp.rect.midY)])
+drawArrow(points: [NSPoint(x: mcpClient.rect.midX, y: mcpClient.rect.minY), NSPoint(x: mcpClient.rect.midX, y: officialMcp.rect.midY), NSPoint(x: officialMcp.rect.maxX - 6, y: officialMcp.rect.midY)], color: color(0xb57918))
 drawArrow(points: [NSPoint(x: orchestrator.rect.midX - 35, y: orchestrator.rect.minY + 6), NSPoint(x: llm.rect.midX - 35, y: llm.rect.maxY - 6)], color: color(0x8d76dd))
 drawArrow(points: [NSPoint(x: llm.rect.midX + 35, y: llm.rect.maxY - 6), NSPoint(x: orchestrator.rect.midX + 35, y: orchestrator.rect.minY + 6)], color: color(0x8d76dd))
+drawArrow(points: [NSPoint(x: officialMcp.rect.midX, y: officialMcp.rect.minY), NSPoint(x: officialMcp.rect.midX, y: 545), NSPoint(x: rag.rect.midX, y: 545), NSPoint(x: rag.rect.midX, y: rag.rect.maxY)], color: color(0xb57918))
 
 drawArrow(points: [NSPoint(x: mcp.rect.midX, y: mcp.rect.minY), NSPoint(x: mcp.rect.midX, y: 545), NSPoint(x: tools.rect.midX, y: 545), NSPoint(x: tools.rect.midX, y: tools.rect.maxY)])
 drawArrow(points: [NSPoint(x: mcp.rect.midX, y: mcp.rect.minY), NSPoint(x: mcp.rect.midX, y: 545), NSPoint(x: rag.rect.midX, y: 545), NSPoint(x: rag.rect.midX, y: rag.rect.maxY)], color: color(0x8d76dd))
@@ -311,7 +329,7 @@ drawArrow(points: [NSPoint(x: mcp.rect.midX, y: mcp.rect.minY), NSPoint(x: mcp.r
 drawArrow(points: [NSPoint(x: mcp.rect.midX, y: mcp.rect.minY), NSPoint(x: mcp.rect.midX, y: 545), NSPoint(x: platform.rect.midX, y: 545), NSPoint(x: platform.rect.midX, y: platform.rect.maxY)], color: color(0x668cb8))
 
 // Draw cards after connectors so lines never cross labels inside boxes.
-for box in [user, frontend, api, orchestrator, mcp, llm, tools, rag, business, platform] {
+for box in [user, frontend, api, orchestrator, mcp, mcpClient, llm, officialMcp, tools, rag, business, platform] {
     drawBox(box)
 }
 

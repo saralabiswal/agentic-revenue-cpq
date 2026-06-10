@@ -4,6 +4,7 @@ Author: Sarala Biswal
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -44,12 +45,14 @@ class ChromaVectorStore:
 
     def __init__(
         self,
-        persist_directory: str | Path = "./chroma_db",
+        persist_directory: str | Path | None = None,
         collection_name: str = "knowledge",
         client: Any | None = None,
     ) -> None:
         """Open or create the configured persistent Chroma collection."""
-        self.persist_directory = Path(persist_directory)
+        self.persist_directory = Path(
+            persist_directory or os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
+        )
         self.collection_name = collection_name
         # Default path is ./chroma_db, which is ignored by git as runtime data.
         self._client = client or chromadb.PersistentClient(path=str(self.persist_directory))

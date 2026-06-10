@@ -5,6 +5,8 @@ Author: Sarala Biswal
 
 import logging
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +39,7 @@ from services.data import (
 )
 from services.llm import create_llm_client
 from services.mcp.factory import create_default_mcp_engine
+from services.mcp.tools import warm_default_retriever
 from services.platform import get_runtime_profile_payload
 
 
@@ -48,7 +51,19 @@ from services.platform import get_runtime_profile_payload
 # 5. The backend records audit/activity details and returns typed API responses.
 configure_logging()
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Enterprise AI Agent Platform")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Prepare local runtime dependencies before serving requests."""
+    if warm_default_retriever():
+        logger.info("Local RAG runtime ready")
+    else:
+        logger.warning("Local RAG runtime unavailable; search_knowledge will return empty context")
+    yield
+
+
+app = FastAPI(title="Enterprise AI Agent Platform", lifespan=lifespan)
 
 # Allow the local Next.js app to call the API during development. Production
 # deployments can replace this with FRONTEND_ORIGINS.

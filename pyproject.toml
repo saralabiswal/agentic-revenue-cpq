@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.110.0",
     "httpx>=0.27.0",
     "langgraph>=1.0.0",
+    "mcp[cli]>=1.27.2",
     "uvicorn[standard]>=0.27.0",
 ]
 
@@ -27,6 +28,7 @@ pythonpath = ["."]
 packages = [
     "apps",
     "apps.backend",
+    "apps.mcp_server",
     "configs",
     "services",
     "services.agent",

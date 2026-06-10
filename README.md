@@ -72,6 +72,32 @@ Sales Rep
 - Runtime provider profile metadata is exposed read-only through `GET /runtime/profile`.
 - Provider selection is controlled by backend deployment configuration, not by UI mutation.
 
+## MCP Surfaces
+
+This project has two MCP-related surfaces:
+
+| Surface | Purpose | Runtime |
+|---|---|---|
+| Internal MCP engine | In-process tool boundary used by FastAPI, LangGraph, native orchestration, RAG, Salesforce-style reads, and Oracle CPQ-style actions. | `services/mcp` |
+| Official MCP server | Local stdio protocol surface for external MCP-compatible clients. | `apps/mcp_server` |
+
+The official MCP server delegates to the existing internal `MCPExecutionEngine`.
+It does not duplicate Salesforce, CPQ, RAG, pricing, quote, order, or repository logic.
+
+Initial official MCP exposure is read-only:
+
+- `list_accounts`
+- `list_opportunities`
+- `get_opportunity`
+- `list_quotes`
+- `list_orders`
+- `list_activity`
+- `search_knowledge`
+
+Mutating tools are not discoverable through the official MCP server by default.
+Policy, confirmation tokens, and JSONL audit events exist in the adapter layer for
+future controlled exposure of quote creation and finalization.
+
 ## Business Object Ownership
 
 The implementation keeps source-owned identifiers explicit:
@@ -204,6 +230,17 @@ Use deterministic fallback responses instead of live Ollama reasoning:
 ```bash
 LLM_PROVIDER=fallback uv run uvicorn apps.backend.main:app --host 127.0.0.1 --port 8000
 ```
+
+Run the official MCP server locally over stdio after installing the MCP SDK:
+
+```bash
+uv add "mcp[cli]"
+uv run python -m apps.mcp_server.main
+```
+
+The first MCP exposure set is read-only: accounts, opportunities, quote history,
+orders, activity, and `search_knowledge`. Quote creation and finalization remain
+internal until confirmation, authorization, and audit controls are implemented.
 
 Start the frontend in a second terminal:
 

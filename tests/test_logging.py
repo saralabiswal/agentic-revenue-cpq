@@ -81,8 +81,10 @@ def test_configure_logging_resolves_configured_level(
 
 def test_backend_chat_logs_request_lifecycle(
     caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Verify backend chat logs request lifecycle behavior."""
+    monkeypatch.setenv("LLM_PROVIDER", "fallback")
     client = TestClient(app)
 
     with caplog.at_level(logging.INFO, logger="apps.backend.main"):

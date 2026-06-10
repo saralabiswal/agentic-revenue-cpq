@@ -179,7 +179,7 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "Deployable containers, local runtime services, and target cloud managed services for Local, OCI, GCP, and generic Kubernetes profiles.",
+    "Deployable containers, local runtime services, official MCP stdio exposure, and target managed services for Local, OCI, GCP, and generic Kubernetes profiles.",
     in: NSRect(x: 190, y: 1064, width: 1420, height: 28),
     size: 18,
     weight: .regular,
@@ -235,20 +235,28 @@ let backend = Card(
     rect: NSRect(x: 960, y: 760, width: 270, height: 145),
     eyebrow: "CONTAINER",
     title: "FastAPI Backend",
-    lines: ["AgentOrchestrator", "MCP engine", "Provider factories"],
+    lines: ["REST routes", "AgentOrchestrator", "Provider factories"],
     fill: color(0xf6fffb),
     stroke: color(0x76bea8)
 )
 let workers = Card(
     rect: NSRect(x: 1285, y: 760, width: 290, height: 145),
     eyebrow: "IN-PROCESS",
-    title: "Agent + MCP Runtime",
-    lines: ["LangGraph or native", "Tool registry", "RAG via MCP"],
+    title: "Internal Runtime",
+    lines: ["LangGraph or native", "MCP engine", "RAG via tools"],
+    fill: color(0xfffbf1),
+    stroke: color(0xe3b45d)
+)
+let officialMcp = Card(
+    rect: NSRect(x: 1285, y: 640, width: 290, height: 105),
+    eyebrow: "STDIO PROCESS",
+    title: "Official MCP Server",
+    lines: ["FastMCP, contracts, audit"],
     fill: color(0xfffbf1),
     stroke: color(0xe3b45d)
 )
 
-for card in [browser, frontend, edge, backend, workers] {
+for card in [browser, frontend, edge, backend, workers, officialMcp] {
     drawCard(card)
 }
 
@@ -256,9 +264,10 @@ drawArrow(points: [NSPoint(x: browser.rect.maxX, y: browser.rect.midY), NSPoint(
 drawArrow(points: [NSPoint(x: frontend.rect.maxX, y: frontend.rect.midY), NSPoint(x: edge.rect.minX, y: edge.rect.midY)])
 drawArrow(points: [NSPoint(x: edge.rect.maxX, y: edge.rect.midY), NSPoint(x: backend.rect.minX, y: backend.rect.midY)])
 drawArrow(points: [NSPoint(x: backend.rect.maxX, y: backend.rect.midY), NSPoint(x: workers.rect.minX, y: workers.rect.midY)])
+drawArrow(points: [NSPoint(x: officialMcp.rect.midX, y: officialMcp.rect.maxY), NSPoint(x: officialMcp.rect.midX, y: workers.rect.minY)], color: color(0xb57918))
 
-drawPill("Docker Compose: frontend + backend + optional Ollama", rect: NSRect(x: 250, y: 670, width: 520, height: 38), fill: color(0xffffff), stroke: color(0x9eb0c6))
-drawPill("Kubernetes/Cloud Run/OKE/GKE: same app containers", rect: NSRect(x: 1010, y: 670, width: 560, height: 38), fill: color(0xffffff), stroke: color(0x87c9bd))
+drawPill("Docker Compose: frontend + backend + optional Ollama", rect: NSRect(x: 250, y: 1005, width: 520, height: 38), fill: color(0xffffff), stroke: color(0x9eb0c6))
+drawPill("Kubernetes/Cloud Run/OKE/GKE: same app containers", rect: NSRect(x: 1010, y: 1005, width: 560, height: 38), fill: color(0xffffff), stroke: color(0x87c9bd))
 
 let localOllama = Card(
     rect: NSRect(x: 115, y: 355, width: 220, height: 145),
@@ -284,8 +293,16 @@ let localSqlite = Card(
     fill: color(0xf6fffb),
     stroke: color(0x87c9bd)
 )
+let localMcpClient = Card(
+    rect: NSRect(x: 115, y: 170, width: 220, height: 145),
+    eyebrow: "LOCAL MCP",
+    title: "MCP Clients",
+    lines: ["Inspector / IDE", "Stdio command", "No remote auth"],
+    fill: color(0xfffbf1),
+    stroke: color(0xe3b45d)
+)
 let localOps = Card(
-    rect: NSRect(x: 205, y: 170, width: 250, height: 145),
+    rect: NSRect(x: 365, y: 170, width: 220, height: 145),
     eyebrow: "LOCAL PLATFORM",
     title: "Local FS + Env",
     lines: ["Object files", "Environment secrets", "Python logging"],
@@ -293,7 +310,7 @@ let localOps = Card(
     stroke: color(0x8eb7de)
 )
 let localMocks = Card(
-    rect: NSRect(x: 485, y: 170, width: 250, height: 145),
+    rect: NSRect(x: 615, y: 170, width: 220, height: 145),
     eyebrow: "LOCAL TOOLS",
     title: "Mock Systems",
     lines: ["Salesforce mock", "Oracle CPQ mock", "No cloud creds"],
@@ -301,7 +318,7 @@ let localMocks = Card(
     stroke: color(0xe3b45d)
 )
 
-for card in [localOllama, localChroma, localSqlite, localOps, localMocks] {
+for card in [localOllama, localChroma, localSqlite, localMcpClient, localOps, localMocks] {
     drawCard(card)
 }
 

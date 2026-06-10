@@ -201,7 +201,7 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "A governed agentic command center with a stable FastAPI + AgentOrchestrator + MCP core and swappable Local, OCI, and GCP provider profiles.",
+    "A governed agentic command center with FastAPI orchestration, internal MCP execution, official MCP stdio exposure, and swappable provider profiles.",
     in: NSRect(x: 220, y: 1004, width: 1360, height: 28),
     size: 18,
     weight: .regular,
@@ -226,7 +226,7 @@ drawSoftPanel(
 drawSoftPanel(
     mcpPanel,
     title: "MCP Execution Boundary",
-    subtitle: "The agent reaches Salesforce, RAG, and Oracle CPQ only through registered tools.",
+    subtitle: "The backend agent uses the internal MCP engine; external MCP clients use the official read-only stdio server.",
     stroke: color(0xe1ad45),
     labelColor: color(0x5a3b00)
 )
@@ -256,15 +256,23 @@ let backend = Card(
     stroke: color(0x78c6ad)
 )
 let agent = Card(
-    rect: NSRect(x: 1150, y: 660, width: 300, height: 170),
+    rect: NSRect(x: 1130, y: 660, width: 285, height: 170),
     eyebrow: "ORCHESTRATION",
     title: "AgentOrchestrator",
     lines: ["LangGraph local/demo", "Native Python option", "MCP-only tool calls"],
     fill: color(0xffffff),
     stroke: color(0x78c6ad)
 )
+let mcpClient = Card(
+    rect: NSRect(x: 1480, y: 660, width: 240, height: 170),
+    eyebrow: "EXTERNAL MCP",
+    title: "MCP Client",
+    lines: ["Inspector / IDE", "Stdio transport", "Read-only tools"],
+    fill: color(0xffffff),
+    stroke: color(0xe1ad45)
+)
 let llm = Card(
-    rect: NSRect(x: 1150, y: 480, width: 300, height: 168),
+    rect: NSRect(x: 1130, y: 480, width: 285, height: 168),
     eyebrow: "REASONING",
     title: "LLMClient",
     lines: ["Ollama local", "OCI GenAI / Vertex AI stubs", "Fallback explicit"],
@@ -272,10 +280,18 @@ let llm = Card(
     stroke: color(0xb8a8ed)
 )
 let router = Card(
-    rect: NSRect(x: 660, y: 320, width: 480, height: 108),
+    rect: NSRect(x: 430, y: 320, width: 430, height: 108),
     eyebrow: "MCP",
-    title: "Tool Registry + Engine",
+    title: "Internal MCP Engine",
     lines: ["Validate request, execute tool, return trace"],
+    fill: color(0xfffbf1),
+    stroke: color(0xe1ad45)
+)
+let officialMcp = Card(
+    rect: NSRect(x: 1000, y: 320, width: 520, height: 108),
+    eyebrow: "OFFICIAL MCP SDK",
+    title: "FastMCP Stdio Server",
+    lines: ["Contracts, policy gate, confirmation tokens, JSONL audit"],
     fill: color(0xfffbf1),
     stroke: color(0xe1ad45)
 )
@@ -317,6 +333,12 @@ drawArrow(points: [
     NSPoint(x: agent.rect.minX, y: agent.rect.midY),
 ])
 drawArrow(points: [
+    NSPoint(x: mcpClient.rect.midX, y: mcpClient.rect.minY),
+    NSPoint(x: mcpClient.rect.midX, y: 455),
+    NSPoint(x: officialMcp.rect.midX, y: 455),
+    NSPoint(x: officialMcp.rect.midX, y: officialMcp.rect.maxY),
+], color: color(0xb57918))
+drawArrow(points: [
     NSPoint(x: agent.rect.midX - 28, y: agent.rect.minY),
     NSPoint(x: agent.rect.midX - 28, y: llm.rect.maxY),
 ], color: color(0x8b76d8))
@@ -331,6 +353,12 @@ drawArrow(points: [
     NSPoint(x: router.rect.midX, y: router.rect.maxY),
 ], color: color(0x5a6b82), width: 3.5)
 drawArrow(points: [
+    NSPoint(x: officialMcp.rect.midX, y: officialMcp.rect.minY),
+    NSPoint(x: officialMcp.rect.midX, y: 330),
+    NSPoint(x: rag.rect.midX, y: 330),
+    NSPoint(x: rag.rect.midX, y: rag.rect.maxY),
+], color: color(0xb57918))
+drawArrow(points: [
     NSPoint(x: router.rect.midX, y: router.rect.minY),
     NSPoint(x: router.rect.midX, y: 330),
     NSPoint(x: salesforce.rect.midX, y: 330),
@@ -342,12 +370,12 @@ drawArrow(points: [
 ], color: color(0x8b76d8))
 drawArrow(points: [
     NSPoint(x: router.rect.midX, y: router.rect.minY),
-    NSPoint(x: router.rect.midX, y: 330),
-    NSPoint(x: cpq.rect.midX, y: 330),
+    NSPoint(x: router.rect.midX, y: 308),
+    NSPoint(x: cpq.rect.midX, y: 308),
     NSPoint(x: cpq.rect.midX, y: cpq.rect.maxY),
 ], color: color(0x5a6b82))
 
-for card in [salesRep, workbench, backend, agent, llm, router, salesforce, rag, cpq] {
+for card in [salesRep, workbench, backend, agent, mcpClient, llm, router, officialMcp, salesforce, rag, cpq] {
     drawCard(card)
 }
 

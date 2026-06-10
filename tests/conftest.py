@@ -12,6 +12,7 @@ from services.data import reset_business_data
 def reset_mock_business_data(tmp_path, monkeypatch) -> None:
     """Verify reset mock business data behavior."""
     monkeypatch.setenv("BUSINESS_DB_PATH", str(tmp_path / "business.sqlite3"))
+    monkeypatch.setenv("CHROMA_PERSIST_DIRECTORY", str(tmp_path / "chroma_db"))
     reset_business_data()
     yield
     monkeypatch.setenv("PLATFORM_PROFILE", "local")
