@@ -179,7 +179,7 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "Deployable containers, local runtime services, official MCP stdio exposure, and target managed services for Local, OCI, GCP, and generic Kubernetes profiles.",
+    "Current local containers and runtime services, plus target managed-service mappings for OCI, GCP, and generic Kubernetes profiles behind stubs.",
     in: NSRect(x: 190, y: 1064, width: 1420, height: 28),
     size: 18,
     weight: .regular,
@@ -189,7 +189,7 @@ drawText(
 drawPanel(
     NSRect(x: 70, y: 635, width: 1660, height: 360),
     title: "Application Runtime",
-    subtitle: "Frontend and backend containers stay consistent across profiles; provider factories choose infrastructure.",
+    subtitle: "Frontend and backend containers run locally today; provider factories keep future infrastructure behind adapters.",
     stroke: color(0xcad5e5)
 )
 drawPanel(
@@ -227,7 +227,7 @@ let edge = Card(
     rect: NSRect(x: 670, y: 760, width: 235, height: 145),
     eyebrow: "EDGE",
     title: "Ingress / LB",
-    lines: ["Local direct call", "OCI LB / API Gateway", "GCP LB / API Gateway"],
+    lines: ["Local direct call", "Cloud edge target", "Not wired locally"],
     fill: color(0xffffff),
     stroke: color(0xb8c6d8)
 )
@@ -251,7 +251,7 @@ let officialMcp = Card(
     rect: NSRect(x: 1285, y: 640, width: 290, height: 105),
     eyebrow: "STDIO PROCESS",
     title: "Official MCP Server",
-    lines: ["FastMCP, contracts, audit"],
+    lines: ["Read-only stdio + audit"],
     fill: color(0xfffbf1),
     stroke: color(0xe3b45d)
 )
@@ -266,8 +266,8 @@ drawArrow(points: [NSPoint(x: edge.rect.maxX, y: edge.rect.midY), NSPoint(x: bac
 drawArrow(points: [NSPoint(x: backend.rect.maxX, y: backend.rect.midY), NSPoint(x: workers.rect.minX, y: workers.rect.midY)])
 drawArrow(points: [NSPoint(x: officialMcp.rect.midX, y: officialMcp.rect.maxY), NSPoint(x: officialMcp.rect.midX, y: workers.rect.minY)], color: color(0xb57918))
 
-drawPill("Docker Compose: frontend + backend + optional Ollama", rect: NSRect(x: 250, y: 1005, width: 520, height: 38), fill: color(0xffffff), stroke: color(0x9eb0c6))
-drawPill("Kubernetes/Cloud Run/OKE/GKE: same app containers", rect: NSRect(x: 1010, y: 1005, width: 560, height: 38), fill: color(0xffffff), stroke: color(0x87c9bd))
+drawPill("Docker Compose today: frontend + backend + Ollama", rect: NSRect(x: 250, y: 1005, width: 520, height: 38), fill: color(0xffffff), stroke: color(0x9eb0c6))
+drawPill("Cloud targets later: same app containers plus provider adapters", rect: NSRect(x: 1010, y: 1005, width: 560, height: 38), fill: color(0xffffff), stroke: color(0x87c9bd))
 
 let localOllama = Card(
     rect: NSRect(x: 115, y: 355, width: 220, height: 145),
@@ -289,7 +289,7 @@ let localSqlite = Card(
     rect: NSRect(x: 615, y: 355, width: 220, height: 145),
     eyebrow: "LOCAL DATA",
     title: "SQLite",
-    lines: ["app_data", "Business state", "Run history"],
+    lines: ["business.sqlite3", "Business state", "Run history"],
     fill: color(0xf6fffb),
     stroke: color(0x87c9bd)
 )
@@ -325,40 +325,40 @@ for card in [localOllama, localChroma, localSqlite, localMcpClient, localOps, lo
 let oci = Card(
     rect: NSRect(x: 975, y: 355, width: 220, height: 145),
     eyebrow: "OCI",
-    title: "OCI Services",
-    lines: ["OKE / Compute", "Generative AI", "Object Storage"],
+    title: "OCI Targets",
+    lines: ["OKE / Compute", "Generative AI", "Adapters stubbed"],
     fill: color(0xfffbf1),
     stroke: color(0xd29a4a)
 )
 let oracleData = Card(
     rect: NSRect(x: 1225, y: 355, width: 220, height: 145),
     eyebrow: "OCI DATA",
-    title: "Oracle Data",
-    lines: ["Autonomous DB", "Oracle DB 23ai", "OCI OpenSearch"],
+    title: "Oracle Data Targets",
+    lines: ["Autonomous DB", "Oracle DB 23ai", "No SDKs wired"],
     fill: color(0xfffbf1),
     stroke: color(0xd29a4a)
 )
 let gcp = Card(
     rect: NSRect(x: 1475, y: 355, width: 220, height: 145),
     eyebrow: "GCP",
-    title: "GCP Services",
-    lines: ["Cloud Run / GKE", "Vertex AI", "Cloud Storage"],
+    title: "GCP Targets",
+    lines: ["Cloud Run / GKE", "Vertex AI", "Adapters stubbed"],
     fill: color(0xf8fbff),
     stroke: color(0x6da8df)
 )
 let gcpData = Card(
     rect: NSRect(x: 1065, y: 170, width: 250, height: 145),
     eyebrow: "GCP DATA",
-    title: "Google Data",
-    lines: ["Cloud SQL", "AlloyDB", "Vertex Vector Search"],
+    title: "Google Data Targets",
+    lines: ["Cloud SQL", "AlloyDB", "No SDKs wired"],
     fill: color(0xf8fbff),
     stroke: color(0x6da8df)
 )
 let commonCloud = Card(
     rect: NSRect(x: 1345, y: 170, width: 250, height: 145),
     eyebrow: "PLATFORM",
-    title: "Ops Providers",
-    lines: ["Vault / Secret Manager", "Cloud logging", "OpenTelemetry"],
+    title: "Ops Targets",
+    lines: ["Vault / Secret Manager", "Cloud logging", "OpenTelemetry target"],
     fill: color(0xf6fffb),
     stroke: color(0x77b693)
 )
@@ -371,10 +371,10 @@ drawArrow(points: [NSPoint(x: backend.rect.midX, y: backend.rect.minY), NSPoint(
 drawArrow(points: [NSPoint(x: backend.rect.midX, y: backend.rect.minY), NSPoint(x: backend.rect.midX, y: 610), NSPoint(x: 1340, y: 610), NSPoint(x: 1340, y: oci.rect.maxY)], color: color(0x66758a))
 
 drawPill("Local default: PLATFORM_PROFILE=local", rect: NSRect(x: 300, y: 585, width: 420, height: 36), fill: color(0xffffff), stroke: color(0x9eb0c6))
-drawPill("Cloud targets: PLATFORM_PROFILE=oci | gcp | generic-kubernetes", rect: NSRect(x: 1115, y: 585, width: 520, height: 36), fill: color(0xffffff), stroke: color(0xbfd5df))
+drawPill("Cloud profiles are display/config stubs until adapters are implemented", rect: NSRect(x: 1115, y: 585, width: 520, height: 36), fill: color(0xffffff), stroke: color(0xbfd5df))
 
 drawText(
-    "Physical invariant: app containers can move between local Docker, OCI, GCP, and Kubernetes, but provider-specific SDKs stay inside future adapters.",
+    "Physical invariant: local Docker is runnable today; cloud services shown here are deployment targets behind future provider adapters.",
     in: NSRect(x: 150, y: 55, width: 1500, height: 28),
     size: 17,
     weight: .semibold,

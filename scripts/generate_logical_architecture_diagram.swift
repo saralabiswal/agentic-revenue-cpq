@@ -191,7 +191,7 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "A stable application core: AgentOrchestrator controls workflow, internal MCP controls execution, official MCP stdio exposes read-only tools, and RAG stays behind search_knowledge.",
+    "A stable application core: AgentOrchestrator controls workflow, internal MCP controls execution, official MCP stdio exposes read-only account, quote, order, activity, and RAG tools.",
     in: NSRect(x: 170, y: 1064, width: 1460, height: 28),
     size: 18,
     weight: .regular,
@@ -260,7 +260,7 @@ let mcpClient = Box(
     rect: NSRect(x: 1510, y: 700, width: 185, height: 165),
     eyebrow: "CLIENT",
     title: "MCP Client",
-    lines: ["Inspector", "IDE", "Claude"],
+    lines: ["Inspector / IDE", "Read-only stdio", "No remote auth"],
     fill: color(0xffffff),
     stroke: color(0xe3b45d)
 )
@@ -277,15 +277,15 @@ let officialMcp = Box(
     rect: NSRect(x: 1215, y: 560, width: 280, height: 125),
     eyebrow: "OFFICIAL MCP",
     title: "Stdio Server",
-    lines: ["FastMCP adapter", "Contracts, policy, audit"],
+    lines: ["Read-only tools + audit"],
     fill: color(0xfffbf1),
     stroke: color(0xe3b45d)
 )
 let tools = Box(
     rect: NSRect(x: 235, y: 270, width: 275, height: 170),
     eyebrow: "TOOLS",
-    title: "Integrations",
-    lines: ["Salesforce access", "Oracle CPQ access", "All calls via MCP"],
+    title: "Mock Integrations",
+    lines: ["Salesforce-shaped access", "CPQ-shaped access", "Agent calls via MCP"],
     fill: color(0xffffff),
     stroke: color(0x8eb7de)
 )
@@ -301,7 +301,7 @@ let business = Box(
     rect: NSRect(x: 915, y: 270, width: 275, height: 170),
     eyebrow: "STATE",
     title: "BusinessStore",
-    lines: ["Accounts / opportunities", "Quotes / orders", "Source-prefixed IDs"],
+    lines: ["SQLite local store", "Quotes / orders", "Source-prefixed IDs"],
     fill: color(0xf6fffb),
     stroke: color(0x87c9bd)
 )
@@ -309,7 +309,7 @@ let platform = Box(
     rect: NSRect(x: 1255, y: 270, width: 275, height: 170),
     eyebrow: "PLATFORM",
     title: "Platform Providers",
-    lines: ["ObjectStore", "SecretsProvider", "ObservabilityProvider"],
+    lines: ["Local providers live", "Cloud providers stubbed", "Runtime profile read-only"],
     fill: color(0xf8fbff),
     stroke: color(0x8eb7de)
 )
@@ -338,13 +338,13 @@ drawDot(NSPoint(x: 605, y: api.rect.midY), text: "2", fill: color(0x2f9277))
 drawDot(NSPoint(x: 1215, y: mcp.rect.midY), text: "3", fill: color(0xb57918))
 drawDot(NSPoint(x: mcp.rect.midX, y: 545), text: "4", fill: color(0x576a82))
 
-drawPill("Local: LangGraph + Ollama + ChromaDB + SQLite + local_fs + env + Python logging", rect: NSRect(x: 135, y: 230, width: 720, height: 38), fill: color(0xffffff), stroke: color(0x9eb0c6))
-drawPill("OCI: Native / Responses API + OCI GenAI + DB 23ai + Autonomous DB + Object Storage + Vault", rect: NSRect(x: 945, y: 230, width: 720, height: 38), fill: color(0xffffff), stroke: color(0xd29a4a))
-drawPill("GCP: Native / Vertex Agent + Gemini + Vector Search + Cloud SQL / AlloyDB", rect: NSRect(x: 135, y: 172, width: 720, height: 38), fill: color(0xffffff), stroke: color(0x6da8df))
-drawPill("Generic Kubernetes: Native + configured LLM + pgvector/OpenSearch + PostgreSQL", rect: NSRect(x: 945, y: 172, width: 720, height: 38), fill: color(0xffffff), stroke: color(0x77b693))
+drawPill("Local live: LangGraph/native + Ollama + ChromaDB + SQLite + local_fs + env + Python logging", rect: NSRect(x: 135, y: 230, width: 720, height: 38), fill: color(0xffffff), stroke: color(0x9eb0c6))
+drawPill("OCI target stubs: native + OCI GenAI + DB 23ai + Autonomous DB + Object Storage + Vault", rect: NSRect(x: 945, y: 230, width: 720, height: 38), fill: color(0xffffff), stroke: color(0xd29a4a))
+drawPill("GCP target stubs: native + Vertex AI + Vector Search + Cloud SQL / AlloyDB", rect: NSRect(x: 135, y: 172, width: 720, height: 38), fill: color(0xffffff), stroke: color(0x6da8df))
+drawPill("Generic Kubernetes target: native + configured providers behind adapter boundaries", rect: NSRect(x: 945, y: 172, width: 720, height: 38), fill: color(0xffffff), stroke: color(0x77b693))
 
 drawText(
-    "Invariant: PLATFORM_PROFILE can change providers, but API payload names, MCP tool names, RAG access, and source-owned IDs remain stable.",
+    "Invariant: PLATFORM_PROFILE can change provider names, but API payloads, MCP tool names, RAG access, and source-prefixed IDs remain stable.",
     in: NSRect(x: 170, y: 52, width: 1460, height: 28),
     size: 17,
     weight: .semibold,

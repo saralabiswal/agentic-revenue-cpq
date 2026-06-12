@@ -201,7 +201,7 @@ drawText(
     color: color(0x102033)
 )
 drawText(
-    "A governed agentic command center with FastAPI orchestration, internal MCP execution, official MCP stdio exposure, and swappable provider profiles.",
+    "A local-first governed command center with FastAPI orchestration, internal MCP execution, official read-only MCP stdio exposure, and target cloud provider profiles.",
     in: NSRect(x: 220, y: 1004, width: 1360, height: 28),
     size: 18,
     weight: .regular,
@@ -251,7 +251,7 @@ let backend = Card(
     rect: NSRect(x: 780, y: 660, width: 300, height: 170),
     eyebrow: "API + DATA",
     title: "FastAPI Backend",
-    lines: ["REST API", "Provider config", "BusinessStore boundary"],
+    lines: ["REST API", "Provider config", "BusinessStore plus order read"],
     fill: color(0xffffff),
     stroke: color(0x78c6ad)
 )
@@ -267,7 +267,7 @@ let mcpClient = Card(
     rect: NSRect(x: 1480, y: 660, width: 240, height: 170),
     eyebrow: "EXTERNAL MCP",
     title: "MCP Client",
-    lines: ["Inspector / IDE", "Stdio transport", "Read-only tools"],
+    lines: ["Inspector / IDE", "Local stdio transport", "Read-only exposed tools"],
     fill: color(0xffffff),
     stroke: color(0xe1ad45)
 )
@@ -288,18 +288,18 @@ let router = Card(
     stroke: color(0xe1ad45)
 )
 let officialMcp = Card(
-    rect: NSRect(x: 1000, y: 320, width: 520, height: 108),
+    rect: NSRect(x: 1000, y: 320, width: 520, height: 118),
     eyebrow: "OFFICIAL MCP SDK",
     title: "FastMCP Stdio Server",
-    lines: ["Contracts, policy gate, confirmation tokens, JSONL audit"],
+    lines: ["Read-only accounts, quotes, orders, activity, RAG"],
     fill: color(0xfffbf1),
     stroke: color(0xe1ad45)
 )
 let salesforce = Card(
     rect: NSRect(x: 160, y: 140, width: 330, height: 165),
-    eyebrow: "CRM SYSTEM",
-    title: "Salesforce CRM",
-    lines: ["Accounts", "Opportunities", "SF-owned identifiers"],
+    eyebrow: "CRM MOCK",
+    title: "Salesforce-Shaped Data",
+    lines: ["Seeded accounts", "Seeded opportunities", "SF-owned identifiers"],
     fill: color(0xf7fbff),
     stroke: color(0x77a9d9)
 )
@@ -313,8 +313,8 @@ let rag = Card(
 )
 let cpq = Card(
     rect: NSRect(x: 1310, y: 140, width: 330, height: 165),
-    eyebrow: "CPQ SYSTEM",
-    title: "Oracle CPQ",
+    eyebrow: "CPQ MOCK",
+    title: "Oracle CPQ-Shaped Data",
     lines: ["Recommendations and pricing", "Quotes and orders", "Oracle-owned identifiers"],
     fill: color(0xfffbf1),
     stroke: color(0xe1ad45)
@@ -381,10 +381,10 @@ for card in [salesRep, workbench, backend, agent, mcpClient, llm, router, offici
 
 // Provider mappings are display/documentation only; the agent still uses
 // AgentOrchestrator -> MCP -> tools/RAG and LLMClient for reasoning.
-drawPill("Local: Ollama + ChromaDB + SQLite", rect: NSRect(x: 125, y: 92, width: 370, height: 34), fill: color(0xffffff), stroke: color(0x9eb0c6))
-drawPill("OCI: GenAI + DB 23ai + Autonomous DB", rect: NSRect(x: 535, y: 92, width: 395, height: 34), fill: color(0xffffff), stroke: color(0xd29a4a))
-drawPill("GCP: Gemini + Vector Search + Cloud SQL", rect: NSRect(x: 970, y: 92, width: 405, height: 34), fill: color(0xffffff), stroke: color(0x6da8df))
-drawPill("K8s: OpenAI + pgvector + PostgreSQL", rect: NSRect(x: 1415, y: 92, width: 360, height: 34), fill: color(0xffffff), stroke: color(0x77b693))
+drawPill("Local live: Ollama + ChromaDB + SQLite", rect: NSRect(x: 125, y: 92, width: 390, height: 34), fill: color(0xffffff), stroke: color(0x9eb0c6))
+drawPill("OCI target: GenAI + DB 23ai + Autonomous DB", rect: NSRect(x: 535, y: 92, width: 415, height: 34), fill: color(0xffffff), stroke: color(0xd29a4a))
+drawPill("GCP target: Gemini + Vector Search + Cloud SQL", rect: NSRect(x: 970, y: 92, width: 430, height: 34), fill: color(0xffffff), stroke: color(0x6da8df))
+drawPill("K8s target: configured LLM + PostgreSQL", rect: NSRect(x: 1420, y: 92, width: 355, height: 34), fill: color(0xffffff), stroke: color(0x77b693))
 
 drawDot(NSPoint(x: 360, y: salesRep.rect.midY), fill: color(0x496d95), text: "1")
 drawDot(NSPoint(x: 740, y: backend.rect.midY), fill: color(0x2f8c70), text: "2")
@@ -392,14 +392,14 @@ drawDot(NSPoint(x: 1115, y: agent.rect.midY), fill: color(0x2f8c70), text: "3")
 drawDot(NSPoint(x: router.rect.midX, y: 485), fill: color(0xb57918), text: "4")
 
 drawText(
-    "Business flow: Salesforce Account -> Salesforce Opportunity -> Agent Recommendation -> Oracle CPQ Quote -> Oracle CPQ Order",
+    "Business flow: Salesforce-shaped Account -> Salesforce-shaped Opportunity -> Agent Recommendation -> CPQ-shaped Quote -> CPQ-shaped Order",
     in: NSRect(x: 150, y: 50, width: 1500, height: 30),
     size: 18,
     weight: .semibold,
     color: color(0x27364a)
 )
 drawText(
-    "Ownership rule: Salesforce owns account and opportunity IDs. Oracle CPQ owns quote and order IDs. The platform owns orchestration state and execution trace.",
+    "Ownership rule: source-prefixed IDs stay stable. The platform owns orchestration state, activity, audit, and execution trace.",
     in: NSRect(x: 170, y: 20, width: 1460, height: 24),
     size: 15,
     weight: .medium,
